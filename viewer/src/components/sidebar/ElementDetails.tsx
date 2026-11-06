@@ -35,6 +35,7 @@ export function ElementDetails({ id }: { id: string }) {
           <StatusPill status={st} />
         </div>
         <code className="self-start rounded-md bg-[#161D2A] px-1.5 py-0.5 font-mono text-[11.5px] text-muted">{el.id}</code>
+        {el.path && <code className="self-start break-all font-mono text-[12px] text-fg-2">{el.path}</code>}
         {el.description && <p className="mt-1 leading-relaxed text-[#B7C0D0]">{el.description}</p>}
         {hasChildren(el) && (
           <Button variant="outline" size="sm" className="mt-1.5 self-start bg-[#161D2A]" onClick={() => setFocus(el.id)}>

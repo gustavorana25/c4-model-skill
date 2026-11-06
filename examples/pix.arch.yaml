@@ -16,6 +16,7 @@ elements:
     name: Loja Online
     status: changed
     children:
+      # ------------------------------------------------------------ Web App
       - id: web-app
         type: container
         name: Web App
@@ -23,7 +24,64 @@ elements:
         status: changed
         detail: delegated
         description: Tela de checkout ganha opção PIX e exibição do QR Code
+        children:
+          - id: checkout-page
+            type: component
+            name: Checkout Page
+            status: changed
+            detail: delegated
+            description: Página de pagamento do pedido
+            children:
+              - id: checkout-page-view
+                type: code
+                name: CheckoutPage
+                path: apps/web/app/checkout/page.tsx
+                status: changed
+                detail: delegated
+                description: Mostra o QR Code quando o método escolhido é PIX
+              - id: method-selector
+                type: code
+                name: PaymentMethodSelector
+                path: apps/web/components/payment-method-selector.tsx
+                status: changed
+                detail: delegated
+                description: Ganha a opção PIX ao lado de cartão
+              - id: payments-api-client
+                type: code
+                name: paymentsApi
+                path: apps/web/lib/payments-api.ts
+                status: changed
+                detail: guided
+                description: Cliente do POST /payments; passa a aceitar method = pix
+                constraints:
+                  - Tipos gerados de contracts/payments.openapi.yaml; nada escrito à mão
+          - id: pix-qr
+            type: component
+            name: PIX QR Code
+            status: new
+            detail: guided
+            description: Exibe o QR Code e acompanha o pagamento
+            constraints:
+              - Mostrar contagem regressiva até a expiração (30 min)
+            children:
+              - id: pix-qr-view
+                type: code
+                name: PixQrCode
+                path: apps/web/components/pix-qr-code.tsx
+                status: new
+                detail: delegated
+                description: QR Code, código copia-e-cola e contagem regressiva
+              - id: use-payment-status
+                type: code
+                name: usePaymentStatus
+                path: apps/web/hooks/use-payment-status.ts
+                status: new
+                detail: guided
+                description: Consulta o status do pagamento até confirmar ou expirar
+                constraints:
+                  - Polling a cada 3s, para ao confirmar, expirar ou sair da tela
 
+      # ------------------------------------------------------------ Checkout API
       - id: checkout-api
         type: container
         name: Checkout API
@@ -39,6 +97,25 @@ elements:
             detail: guided
             constraints:
               - Escolhe o handler pelo método de pagamento; nada de if/else espalhado
+            children:
+              - id: payments-controller
+                type: code
+                name: PaymentsController
+                path: src/payments/payments.controller.ts
+                status: changed
+                detail: locked
+                description: POST /payments delega ao registro; ganha GET /payments/:id/status
+                constraints:
+                  - Segue contracts/payments.openapi.yaml
+              - id: method-registry
+                type: code
+                name: PaymentMethodRegistry
+                path: src/payments/method-registry.ts
+                status: changed
+                detail: guided
+                description: Mapa método → handler; ganha a entrada "pix"
+                constraints:
+                  - Registrar o PIX como mais uma entrada do mapa, sem mudar a interface PaymentHandler
           - id: pix-handler
             type: component
             name: PIX Handler
@@ -47,6 +124,33 @@ elements:
             constraints:
               - Idempotência por txid
               - QR Code expira em 30 minutos
+            children:
+              - id: create-pix-charge
+                type: code
+                name: CreatePixCharge
+                path: src/payments/pix/create-pix-charge.ts
+                status: new
+                detail: guided
+                description: Cria a cobrança no PSP e devolve o QR Code
+                constraints:
+                  - Gera o txid antes de chamar o PSP e reaproveita o mesmo txid em retentativas
+                  - Expiração de 30 minutos enviada na cobrança
+              - id: psp-client
+                type: code
+                name: PspClient
+                path: src/payments/pix/psp-client.ts
+                status: new
+                detail: locked
+                description: Cliente HTTP do PSP gerado a partir do contrato
+                constraints:
+                  - Segue contracts/psp-cobranca.yaml sem campos extras
+              - id: pix-charge-repo
+                type: code
+                name: PixChargeRepository
+                path: src/payments/pix/pix-charge.repository.ts
+                status: new
+                detail: delegated
+                description: Grava e busca cobranças por txid
           - id: webhook-receiver
             type: component
             name: Webhook Receiver
@@ -55,11 +159,36 @@ elements:
             constraints:
               - Validar assinatura mTLS do PSP antes de qualquer processamento
               - Responder 200 em < 2s; processamento assíncrono via fila
+            children:
+              - id: psp-webhook-controller
+                type: code
+                name: PspWebhookController
+                path: src/payments/pix/webhook.controller.ts
+                status: new
+                detail: locked
+                description: Endpoint chamado pelo PSP; valida, publica e responde rápido
+                constraints:
+                  - Nada de I/O além de validar e publicar antes de responder
+              - id: signature-verifier
+                type: code
+                name: verifyPspSignature
+                path: src/payments/pix/verify-signature.ts
+                status: new
+                detail: locked
+                description: Confere certificado mTLS e assinatura do corpo
+              - id: payment-event-publisher
+                type: code
+                name: PaymentEventPublisher
+                path: src/payments/events/publisher.ts
+                status: new
+                detail: delegated
+                description: Publica PaymentConfirmed na fila
           - id: card-handler
             type: component
             name: Card Handler
             description: Pagamento com cartão (existente)
 
+      # ------------------------------------------------------------ Orders DB
       - id: orders-db
         type: database
         name: Orders DB
@@ -68,14 +197,57 @@ elements:
         detail: guided
         constraints:
           - Migração aditiva (coluna pix_txid nullable), sem lock de tabela
+        children:
+          - id: orders-table
+            type: component
+            name: Tabela orders
+            status: changed
+            detail: guided
+            description: Ganha pix_txid (nullable, índice único parcial)
+            constraints:
+              - Índice criado com CREATE INDEX CONCURRENTLY
+            children:
+              - id: add-pix-txid-migration
+                type: code
+                name: add_pix_txid
+                path: db/migrations/20261106_add_pix_txid.sql
+                status: new
+                detail: locked
+                description: ADD COLUMN pix_txid + índice único parcial
+              - id: order-model
+                type: code
+                name: Order
+                path: src/orders/order.model.ts
+                status: changed
+                detail: delegated
+                description: Modelo ganha pixTxid opcional
 
+      # ------------------------------------------------------------ fila
       - id: payment-events
         type: queue
         name: payment-events
         tech: SQS
         status: new
         detail: delegated
+        children:
+          - id: payment-confirmed-event
+            type: component
+            name: PaymentConfirmed
+            status: new
+            detail: locked
+            description: Evento de pagamento confirmado
+            constraints:
+              - Carrega orderId, txid e valor; mudanças só aditivas
+            children:
+              - id: payment-confirmed-schema
+                type: code
+                name: PaymentConfirmed schema
+                path: packages/events/payment-confirmed.ts
+                status: new
+                detail: locked
+                description: Tipo e validação do evento, compartilhado por quem publica e quem consome
 
+      # ------------------------------------------------------------ Order Worker
       - id: order-worker
         type: container
         name: Order Worker
@@ -83,6 +255,41 @@ elements:
         status: changed
         detail: delegated
         description: Confirma o pedido ao consumir eventos de pagamento
+        children:
+          - id: payment-events-consumer
+            type: component
+            name: Payment Events Consumer
+            status: new
+            detail: guided
+            description: Lê payment-events e confirma o pedido
+            constraints:
+              - Idempotente por txid; evento repetido não confirma duas vezes
+            children:
+              - id: payment-confirmed-handler
+                type: code
+                name: handlePaymentConfirmed
+                path: apps/worker/src/handlers/payment-confirmed.ts
+                status: new
+                detail: guided
+                description: Valida o evento e chama a confirmação do pedido
+                constraints:
+                  - Mensagem inválida vai para a DLQ, sem retentar
+          - id: order-confirmation
+            type: component
+            name: Order Confirmation
+            status: changed
+            detail: guided
+            description: Confirmação do pedido (existente), agora também via evento
+            constraints:
+              - Mesma regra de confirmação do cartão; só muda quem chama
+            children:
+              - id: confirm-order
+                type: code
+                name: confirmOrder
+                path: apps/worker/src/orders/confirm-order.ts
+                status: changed
+                detail: delegated
+                description: Aceita confirmação por txid além do id da transação de cartão
 
   - id: psp
     type: external
@@ -96,17 +303,33 @@ elements:
     description: Integração existente
 
 relations:
-  - { from: cliente, to: web-app, label: "faz checkout", protocol: HTTPS }
-  - { from: web-app, to: payment-router, label: "POST /payments", protocol: HTTPS/JSON, status: changed, contract: contracts/payments.openapi.yaml }
-  - { from: payment-router, to: pix-handler, label: "método = pix", status: new }
-  - { from: payment-router, to: card-handler, label: "método = cartão" }
+  # cliente e web
+  - { from: cliente, to: checkout-page-view, label: "faz checkout", protocol: HTTPS }
+  - { from: checkout-page-view, to: method-selector, label: "escolhe método" }
+  - { from: checkout-page-view, to: payments-api-client, label: "paga o pedido" }
+  - { from: checkout-page-view, to: pix-qr-view, label: "mostra QR Code", status: new }
+  - { from: pix-qr-view, to: use-payment-status, label: "acompanha", status: new }
+  - { from: payments-api-client, to: payments-controller, label: "POST /payments", protocol: HTTPS/JSON, status: changed, contract: contracts/payments.openapi.yaml }
+  - { from: use-payment-status, to: payments-controller, label: "GET /payments/:id/status", protocol: HTTPS/JSON, status: new, contract: contracts/payments.openapi.yaml }
+  # roteamento
+  - { from: payments-controller, to: method-registry, label: "resolve handler" }
+  - { from: method-registry, to: create-pix-charge, label: "método = pix", status: new }
+  - { from: method-registry, to: card-handler, label: "método = cartão" }
   - { from: card-handler, to: gateway-cartao, label: "autoriza", protocol: HTTPS }
-  - { from: pix-handler, to: psp, label: "cria cobrança", protocol: HTTPS/REST, status: new, contract: contracts/psp-cobranca.yaml }
-  - { from: pix-handler, to: orders-db, label: "grava txid", protocol: SQL, status: new }
-  - { from: psp, to: webhook-receiver, label: "notifica pagamento", protocol: HTTPS + mTLS, status: new }
-  - { from: webhook-receiver, to: payment-events, label: "publica PaymentConfirmed", status: new }
-  - { from: order-worker, to: payment-events, label: "consome", status: new }
-  - { from: order-worker, to: orders-db, label: "confirma pedido", protocol: SQL }
+  # cobrança PIX
+  - { from: create-pix-charge, to: psp-client, label: "cria cobrança", status: new }
+  - { from: create-pix-charge, to: pix-charge-repo, label: "salva txid", status: new }
+  - { from: psp-client, to: psp, label: "cria cobrança", protocol: HTTPS/REST, status: new, contract: contracts/psp-cobranca.yaml }
+  - { from: pix-charge-repo, to: order-model, label: "grava txid", protocol: SQL, status: new }
+  # webhook e evento
+  - { from: psp, to: psp-webhook-controller, label: "notifica pagamento", protocol: HTTPS + mTLS, status: new }
+  - { from: psp-webhook-controller, to: signature-verifier, label: "valida", status: new }
+  - { from: psp-webhook-controller, to: payment-event-publisher, label: "publica", status: new }
+  - { from: payment-event-publisher, to: payment-confirmed-schema, label: "publica PaymentConfirmed", protocol: SQS, status: new }
+  # confirmação
+  - { from: payment-confirmed-handler, to: payment-confirmed-schema, label: "consome", protocol: SQS, status: new }
+  - { from: payment-confirmed-handler, to: confirm-order, label: "confirma", status: new }
+  - { from: confirm-order, to: order-model, label: "atualiza pedido", protocol: SQL }
 
 steps:
   - id: s1

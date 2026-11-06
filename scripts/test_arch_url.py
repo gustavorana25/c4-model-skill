@@ -65,5 +65,10 @@ d = copy.deepcopy(doc)
 d["elements"][1]["children"][1]["children"][1].pop("detail")
 check("aviso: new sem detail", any("sem detail" in w for w in A.validate(d)[1]))
 
+check("exemplo abre tudo que muda", not any("sem children" in w for w in A.validate(doc)[1]))
+d = copy.deepcopy(doc)
+d["elements"][1]["children"][1]["children"][1].pop("children")  # pix-handler sem code
+check("aviso: componente novo que não abre", any("pix-handler" in w and "sem children" in w for w in A.validate(d)[1]))
+
 print(f"\n{'TUDO OK' if not fails else f'{fails} falha(s)'}")
 sys.exit(1 if fails else 0)

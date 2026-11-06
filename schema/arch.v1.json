@@ -50,11 +50,13 @@
       "properties": {
         "id": { "$ref": "#/$defs/id" },
         "type": {
-          "enum": ["person", "system", "external", "container", "database", "queue", "component"]
+          "enum": ["person", "system", "external", "container", "database", "queue", "component", "code"],
+          "description": "component vive em container, database (tabela, migração) ou queue (evento). code (nível 4) só dentro de component: classe, módulo, função ou arquivo que o plano cria ou altera."
         },
         "name": { "type": "string", "minLength": 1 },
         "description": { "type": "string" },
         "tech": { "type": "string" },
+        "path": { "type": "string", "description": "Arquivo no repositório (útil em code), ex.: src/payments/pix/create-charge.ts" },
         "status": { "$ref": "#/$defs/status" },
         "detail": { "$ref": "#/$defs/detail" },
         "constraints": { "type": "array", "items": { "type": "string" } },

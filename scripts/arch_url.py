@@ -31,8 +31,10 @@ SCHEMA_PATH = ROOT / "schema" / "arch.v1.json"
 VIEWER_PATH = ROOT / "viewer" / "dist" / "index.html"  # build autocontido (npm run build)
 
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
-TYPES = {"person", "system", "external", "container", "database", "queue", "component"}
+TYPES = {"person", "system", "external", "container", "database", "queue", "component", "code"}
 STATUSES = {"new", "changed", "removed", "unchanged"}
+# tipos que, quando o plano os cria ou altera, precisam abrir um nível abaixo (até chegar em code)
+OPENABLE = {"system", "container", "database", "queue", "component"}
 DETAILS = {"locked", "guided", "delegated"}
 # tipo do filho -> tipos de pai permitidos (None = pode ficar na raiz)
 ALLOWED_PARENTS = {
@@ -42,7 +44,9 @@ ALLOWED_PARENTS = {
     "container": {None, "system"},
     "database": {None, "system"},
     "queue": {None, "system"},
-    "component": {"container"},
+    # dentro de database/queue: tabela, migração, evento (o que muda no dado)
+    "component": {"container", "database", "queue"},
+    "code": {"component"},
 }
 
 
@@ -198,9 +202,18 @@ def validate(doc) -> tuple[list[str], list[str]]:
         if st in ("new", "changed"):
             if implementable and "detail" not in el:
                 warnings.append(f"{eid}: status '{st}' sem detail — defina locked/guided/delegated")
-            covered = eid in touched or any(c in touched for c in _descendants(el))
+            # um step que toca o pai (ex.: o componente) também cobre o código dentro dele
+            anc, p = [], parent_of.get(eid)
+            while p:
+                anc.append(p)
+                p = parent_of.get(p)
+            covered = eid in touched or any(c in touched for c in _descendants(el)) or any(a in touched for a in anc)
             if has_steps and not covered:
                 warnings.append(f"{eid}: status '{st}' mas nenhum step toca este elemento")
+            # tudo que muda precisa poder ser aberto até o código
+            if el.get("type") in OPENABLE and not el.get("children"):
+                below = "code" if el["type"] == "component" else "component"
+                warnings.append(f"{eid}: status '{st}' sem children — o humano não consegue abrir; detalhe com '{below}'")
         if el.get("detail") == "guided" and not el.get("constraints"):
             warnings.append(f"{eid}: detail 'guided' sem constraints — o que a IA deve seguir?")
 
@@ -241,7 +254,8 @@ def decode_payload(s: str) -> dict:
 # ---------------------------------------------------------------------- brief
 
 TYPE_PT = {"person": "pessoa", "system": "sistema", "external": "sistema externo", "container": "container",
-           "database": "banco de dados", "queue": "fila", "component": "componente"}
+           "database": "banco de dados", "queue": "fila", "component": "componente",
+           "code": "código"}
 STATUS_PT = {"new": "novo", "changed": "alterado", "removed": "removido", "unchanged": "inalterado"}
 DETAIL_RULE = {
     "locked": "🔒 locked — não altere estrutura, contrato nem tecnologia. Se precisar, PARE e pergunte.",
@@ -279,6 +293,8 @@ def brief(doc: dict, url: str | None = None) -> str:
         st = el.get("status", "unchanged")
         tech = f", {el['tech']}" if el.get("tech") else ""
         lines = [f"- **{el['name']}** (`{el['id']}` · {TYPE_PT.get(el['type'], el['type'])}{tech} · {STATUS_PT[st]})"]
+        if el.get("path"):
+            lines.append(f"  - Arquivo: `{el['path']}`")
         if el.get("detail"):
             lines.append(f"  - {DETAIL_RULE[el['detail']]}")
         for c in el.get("constraints") or []:

@@ -1,5 +1,5 @@
 // Espelha schema/arch.v1.json
-export type ElementType = "person" | "system" | "external" | "container" | "database" | "queue" | "component";
+export type ElementType = "person" | "system" | "external" | "container" | "database" | "queue" | "component" | "code";
 export type Status = "new" | "changed" | "removed" | "unchanged";
 export type Detail = "locked" | "guided" | "delegated";
 
@@ -9,6 +9,8 @@ export interface ArchElement {
   name: string;
   description?: string;
   tech?: string;
+  /** Arquivo no repositório; usado principalmente em code (nível 4). */
+  path?: string;
   status?: Status;
   detail?: Detail;
   constraints?: string[];

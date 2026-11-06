@@ -24,8 +24,10 @@ Salve ao lado do plano como `<nome-do-plano>.arch.yaml`. Schema: `schema/arch.v1
 Regras:
 - **É a arquitetura do plano, não do sistema inteiro.** Inclua o que o plano cria, altera ou remove, mais o contexto mínimo para entender (quem chama, quem é chamado). Não modele o sistema todo.
 - `status`: `new` / `changed` / `removed` / `unchanged` (padrão). Elementos de contexto ficam `unchanged`.
-- Hierarquia C4: `person`, `system`, `external` na raiz; `container`, `database`, `queue` dentro de `system` (ou na raiz); `component` só dentro de `container`. Desça até `component` **só onde o plano mexe** e onde há decisão de design relevante. Nunca modele código (nível 4).
-- Relações ligam os elementos **mais específicos** (component → component). O viewer agrega para os níveis acima.
+- Hierarquia C4: `person`, `system`, `external` na raiz; `container`, `database`, `queue` dentro de `system` (ou na raiz); `component` dentro de `container`, `database` (tabela, migração) ou `queue` (evento); `code` só dentro de `component`.
+- **Tudo que o plano cria ou altera abre até o código.** Todo `system`, `container`, `database`, `queue` e `component` com `status` `new`/`changed` tem `children`, descendo até `code` (o `validate` avisa quando falta). O que não muda fica fechado: é contexto.
+- Nível 4 (`code`): os arquivos, classes, módulos ou funções que o plano cria ou altera, com `path` preenchido. Arquivo que já existe e muda é `status: changed`. Liste o que muda, não o código todo do componente (2 a 4 por componente costuma bastar).
+- Relações ligam os elementos **mais específicos** (code → code quando existe). O viewer agrega para os níveis acima.
 - `steps`: um por passo do plano, mesma ordem e título. `touches` = elementos que o passo cria ou altera.
 - `detail` diz quanta liberdade você terá; o humano vê no viewer e pede mudança se discordar:
   - `locked`: contratos públicos, fronteiras com sistemas externos, segurança, dados sensíveis, migrações de dados.

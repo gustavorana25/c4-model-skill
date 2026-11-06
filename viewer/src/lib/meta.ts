@@ -1,5 +1,5 @@
 import {
-  AppWindow, Bot, Box, Boxes, Circle, Cog, Compass, Database, Globe, Lock, MessagesSquare, PencilLine, Puzzle, Server, Smartphone,
+  AppWindow, Bot, FileCode2, Box, Boxes, Circle, Cog, Compass, Database, Globe, Lock, MessagesSquare, PencilLine, Puzzle, Server, Smartphone,
   Sparkles, Trash2, User, type LucideIcon,
 } from "lucide-react";
 import type { ArchElement, Detail, ElementType, Status } from "./types";
@@ -13,6 +13,7 @@ export const TYPE_META: Record<ElementType, { label: string; icon: LucideIcon; i
   database: { label: "Banco", icon: Database, ink: "#4FD1C5", card: "#141A25" },
   queue: { label: "Fila", icon: MessagesSquare, ink: "#4FD1C5", card: "#141A25" },
   component: { label: "Componente", icon: Puzzle, ink: "#8FC1FF", card: "#1A2638" },
+  code: { label: "Código", icon: FileCode2, ink: "#B79CFF", card: "#1B1F33" },
 };
 
 export const STATUS_META: Record<Status, { label: string; icon: LucideIcon; stroke: string; ink: string; soft: string }> = {
@@ -65,6 +66,7 @@ export function elementIcon(el: ArchElement): LucideIcon {
 export function levelLabel(focusType: ElementType | null): string {
   if (!focusType) return "Nível 1 · Contexto";
   if (focusType === "system") return "Nível 2 · Containers";
-  if (focusType === "container") return "Nível 3 · Componentes";
+  if (focusType === "container" || focusType === "database" || focusType === "queue") return "Nível 3 · Componentes";
+  if (focusType === "component") return "Nível 4 · Código";
   return "Detalhe";
 }
