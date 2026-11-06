@@ -1,5 +1,6 @@
 """Testes do arch_url.py. Rodar: python3 scripts/test_arch_url.py"""
 import copy
+import os
 import sys
 from pathlib import Path
 
@@ -37,6 +38,15 @@ if ts_fixture.exists():  # gerada pelos testes do viewer (npm test)
 else:
     print("pulado: fixture do viewer ausente (rode npm test em viewer/)")
 
+
+_env = os.environ.pop("C4PLAN_VIEWER_URL", None)
+check("viewer padrão é o GitHub Pages", A.default_base() == A.PUBLIC_VIEWER_URL and A.PUBLIC_VIEWER_URL.startswith("https://"))
+os.environ["C4PLAN_VIEWER_URL"] = "https://outro.host/c4/"
+check("C4PLAN_VIEWER_URL tem prioridade", A.default_base() == "https://outro.host/c4/")
+if _env is None:
+    os.environ.pop("C4PLAN_VIEWER_URL")
+else:
+    os.environ["C4PLAN_VIEWER_URL"] = _env
 
 check("reconhece link pelo formato", all(A.looks_like_link(x) for x in [payload, "#" + payload, "http://x/i.html#" + payload]))
 check("reconhece caminho de arquivo", not A.looks_like_link("examples/pix.arch.yaml"))

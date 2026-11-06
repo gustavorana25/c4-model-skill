@@ -3,7 +3,7 @@
 
 Uso:
   arch_url.py validate <arquivo.yaml|json>
-  arch_url.py encode   <arquivo.yaml|json> [--base URL]
+  arch_url.py encode   <arquivo.yaml|json> [--base URL | --local]
   arch_url.py decode   <url|#hash|payload> [-o saida.yaml] [--json]
   arch_url.py brief    <arquivo.yaml|url> [-o saida.md]
 
@@ -29,6 +29,8 @@ PREFIX = f"v{VERSION}."
 ROOT = Path(__file__).resolve().parent.parent
 SCHEMA_PATH = ROOT / "schema" / "arch.v1.json"
 VIEWER_PATH = ROOT / "viewer" / "dist" / "index.html"  # build autocontido (npm run build)
+# versão publicada pelo workflow do GitHub Pages (.github/workflows/pages.yml)
+PUBLIC_VIEWER_URL = "https://gustavorana25.github.io/c4-model-skill/"
 
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 TYPES = {"person", "system", "external", "container", "database", "queue", "component", "code"}
@@ -384,9 +386,14 @@ def looks_like_link(s: str) -> bool:
 
 
 def default_base() -> str:
-    env = os.environ.get("C4PLAN_VIEWER_URL")
-    if env:
-        return env
+    """$C4PLAN_VIEWER_URL (outro host) ou a versão publicada no GitHub Pages."""
+    return os.environ.get("C4PLAN_VIEWER_URL") or PUBLIC_VIEWER_URL
+
+
+def local_base() -> str:
+    """Build local (viewer/dist/index.html), para testar mudanças no viewer antes de publicar."""
+    if not VIEWER_PATH.exists():
+        sys.exit(f"build local não encontrado: {VIEWER_PATH} (rode npm run build em viewer/)")
     p = str(VIEWER_PATH)
     m = re.match(r"^/mnt/([a-z])/(.*)$", p)  # WSL -> caminho Windows
     if m:
@@ -412,7 +419,8 @@ def main() -> None:
 
     e = sub.add_parser("encode", help="valida e gera a URL do viewer")
     e.add_argument("file")
-    e.add_argument("--base", help="URL do viewer (padrão: $C4PLAN_VIEWER_URL ou viewer/index.html local)")
+    e.add_argument("--base", help=f"URL do viewer (padrão: $C4PLAN_VIEWER_URL ou {PUBLIC_VIEWER_URL})")
+    e.add_argument("--local", action="store_true", help="usa o build local viewer/dist/index.html")
 
     d = sub.add_parser("decode", help="converte URL/hash de volta para YAML")
     d.add_argument("url")
@@ -450,7 +458,7 @@ def main() -> None:
         if a.cmd == "validate":
             print(f"ok ({len(warnings)} aviso(s))")
             return
-        url = (a.base or default_base()) + "#" + encode_payload(doc)
+        url = (a.base or (local_base() if a.local else default_base())) + "#" + encode_payload(doc)
         print(url)
         print(f"({len(url)} caracteres)", file=sys.stderr)
         return

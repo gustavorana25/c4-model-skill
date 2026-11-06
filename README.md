@@ -73,13 +73,7 @@ npm run build    # gera dist/index.html: arquivo único, sem CDN
 
 O workflow [`.github/workflows/pages.yml`](.github/workflows/pages.yml) testa, gera o build e publica no GitHub Pages a cada push no `main`. Para ativar num fork: **Settings → Pages → Source: GitHub Actions**.
 
-Para a skill gerar links para a versão publicada:
-
-```bash
-export C4PLAN_VIEWER_URL="https://gustavorana25.github.io/c4-model-skill/"
-```
-
-e o `arch_url.py encode` passa a gerar links para essa URL.
+O `arch_url.py encode` gera links para essa versão por padrão. Para outro host, defina `C4PLAN_VIEWER_URL`; para testar o build local do viewer, use `encode --local`.
 
 ## Script
 
