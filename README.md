@@ -67,10 +67,16 @@ npm test         # codec (compatível com o Python) + lógica das views
 npm run build    # gera dist/index.html: arquivo único, sem CDN
 ```
 
-`dist/index.html` funciona aberto direto do disco ou em qualquer host estático (GitHub Pages, Vercel, Netlify, S3, servidor interno). Depois de hospedar:
+`dist/index.html` funciona aberto direto do disco ou em qualquer host estático (GitHub Pages, Vercel, Netlify, S3, servidor interno).
+
+**Versão publicada:** https://gustavorana25.github.io/c4-model-skill/
+
+O workflow [`.github/workflows/pages.yml`](.github/workflows/pages.yml) testa, gera o build e publica no GitHub Pages a cada push no `main`. Para ativar num fork: **Settings → Pages → Source: GitHub Actions**.
+
+Para a skill gerar links para a versão publicada:
 
 ```bash
-export C4PLAN_VIEWER_URL="https://seu-host/c4-plan/"
+export C4PLAN_VIEWER_URL="https://gustavorana25.github.io/c4-model-skill/"
 ```
 
 e o `arch_url.py encode` passa a gerar links para essa URL.
