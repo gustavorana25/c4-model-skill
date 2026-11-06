@@ -4,7 +4,7 @@ import { describe, expect, test } from "vitest";
 import { computeDimmer } from "./highlight";
 import { buildModel } from "./model";
 import type { ArchDoc } from "./types";
-import { computeView } from "./view";
+import { computeView, defaultExpanded } from "./view";
 
 const doc = load(readFileSync(new URL("../../../examples/pix.arch.yaml", import.meta.url), "utf8")) as ArchDoc;
 const m = buildModel(doc);
@@ -40,6 +40,30 @@ describe("computeView", () => {
     expect(pairs(v)).not.toContain("cliente>web-app"); // não toca o foco
     expect(v.nodes.find((n) => n.el.id === "web-app")!.container).toBe("loja");
     expect(v.nodes.find((n) => n.el.id === "pix-handler")!.container).toBe("checkout-api");
+  });
+});
+
+describe("canvas único (caixas abertas no lugar)", () => {
+  test("abre no lugar, mantém o resto e aninha as caixas", () => {
+    const v = computeView(doc, m, null, new Set(["loja", "checkout-api"]));
+    expect([...v.open].sort()).toEqual(["checkout-api", "loja"]);
+    expect(v.boundaryParent.get("checkout-api")).toBe("loja");
+    expect(v.boundaryParent.get("loja")).toBeNull();
+    const ids = v.nodes.map((n) => n.el.id);
+    // geral continua: pessoa e externos; caixa aberta some e os filhos entram
+    expect(ids).toEqual(expect.arrayContaining(["cliente", "psp", "web-app", "pix-handler", "orders-db"]));
+    expect(ids).not.toContain("checkout-api");
+    expect(pairs(v)).toContain("pix-handler>psp");
+    expect(pairs(v)).toContain("web-app>payment-router");
+  });
+
+  test("abertura inicial mostra os componentes do que muda, com o código fechado", () => {
+    const exp = defaultExpanded(m);
+    expect(exp.has("loja") && exp.has("checkout-api") && exp.has("orders-db")).toBe(true);
+    expect(exp.has("pix-handler")).toBe(false);
+    const ids = computeView(doc, m, null, exp).nodes.map((n) => n.el.id);
+    expect(ids).toContain("pix-handler");
+    expect(ids).not.toContain("create-pix-charge");
   });
 });
 

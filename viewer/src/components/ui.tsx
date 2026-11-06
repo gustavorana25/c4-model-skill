@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
-import { DETAIL_META, STATUS_META } from "../lib/meta";
-import type { Detail, Status } from "../lib/types";
+import { STATUS_META } from "../lib/meta";
+import type { Status } from "../lib/types";
 
 export const cn = (...xs: (string | false | null | undefined)[]) => xs.filter(Boolean).join(" ");
 
@@ -49,16 +49,6 @@ export function StatusPill({ status, upper }: { status: Status; upper?: boolean 
   return (
     <Pill style={{ background: s.soft, color: s.ink }} className={upper ? "font-bold uppercase tracking-wide" : ""}>
       {s.label}
-    </Pill>
-  );
-}
-
-export function DetailPill({ detail }: { detail: Detail }) {
-  const d = DETAIL_META[detail];
-  return (
-    <Pill className="bg-chip" style={{ color: d.ink }}>
-      <d.icon size={11} strokeWidth={2.4} />
-      {d.label}
     </Pill>
   );
 }

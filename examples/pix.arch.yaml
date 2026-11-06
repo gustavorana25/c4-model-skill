@@ -22,14 +22,12 @@ elements:
         name: Web App
         tech: Next.js
         status: changed
-        detail: delegated
         description: Tela de checkout ganha opção PIX e exibição do QR Code
         children:
           - id: checkout-page
             type: component
             name: Checkout Page
             status: changed
-            detail: delegated
             description: Página de pagamento do pedido
             children:
               - id: checkout-page-view
@@ -37,21 +35,18 @@ elements:
                 name: CheckoutPage
                 path: apps/web/app/checkout/page.tsx
                 status: changed
-                detail: delegated
                 description: Mostra o QR Code quando o método escolhido é PIX
               - id: method-selector
                 type: code
                 name: PaymentMethodSelector
                 path: apps/web/components/payment-method-selector.tsx
                 status: changed
-                detail: delegated
                 description: Ganha a opção PIX ao lado de cartão
               - id: payments-api-client
                 type: code
                 name: paymentsApi
                 path: apps/web/lib/payments-api.ts
                 status: changed
-                detail: guided
                 description: Cliente do POST /payments; passa a aceitar method = pix
                 constraints:
                   - Tipos gerados de contracts/payments.openapi.yaml; nada escrito à mão
@@ -59,7 +54,6 @@ elements:
             type: component
             name: PIX QR Code
             status: new
-            detail: guided
             description: Exibe o QR Code e acompanha o pagamento
             constraints:
               - Mostrar contagem regressiva até a expiração (30 min)
@@ -69,14 +63,12 @@ elements:
                 name: PixQrCode
                 path: apps/web/components/pix-qr-code.tsx
                 status: new
-                detail: delegated
                 description: QR Code, código copia-e-cola e contagem regressiva
               - id: use-payment-status
                 type: code
                 name: usePaymentStatus
                 path: apps/web/hooks/use-payment-status.ts
                 status: new
-                detail: guided
                 description: Consulta o status do pagamento até confirmar ou expirar
                 constraints:
                   - Polling a cada 3s, para ao confirmar, expirar ou sair da tela
@@ -87,14 +79,12 @@ elements:
         name: Checkout API
         tech: Node.js / Fastify
         status: changed
-        detail: locked
         description: Orquestra o pagamento do pedido
         children:
           - id: payment-router
             type: component
             name: Payment Router
             status: changed
-            detail: guided
             constraints:
               - Escolhe o handler pelo método de pagamento; nada de if/else espalhado
             children:
@@ -103,7 +93,6 @@ elements:
                 name: PaymentsController
                 path: src/payments/payments.controller.ts
                 status: changed
-                detail: locked
                 description: POST /payments delega ao registro; ganha GET /payments/:id/status
                 constraints:
                   - Segue contracts/payments.openapi.yaml
@@ -112,7 +101,6 @@ elements:
                 name: PaymentMethodRegistry
                 path: src/payments/method-registry.ts
                 status: changed
-                detail: guided
                 description: Mapa método → handler; ganha a entrada "pix"
                 constraints:
                   - Registrar o PIX como mais uma entrada do mapa, sem mudar a interface PaymentHandler
@@ -120,7 +108,6 @@ elements:
             type: component
             name: PIX Handler
             status: new
-            detail: guided
             constraints:
               - Idempotência por txid
               - QR Code expira em 30 minutos
@@ -130,7 +117,6 @@ elements:
                 name: CreatePixCharge
                 path: src/payments/pix/create-pix-charge.ts
                 status: new
-                detail: guided
                 description: Cria a cobrança no PSP e devolve o QR Code
                 constraints:
                   - Gera o txid antes de chamar o PSP e reaproveita o mesmo txid em retentativas
@@ -140,7 +126,6 @@ elements:
                 name: PspClient
                 path: src/payments/pix/psp-client.ts
                 status: new
-                detail: locked
                 description: Cliente HTTP do PSP gerado a partir do contrato
                 constraints:
                   - Segue contracts/psp-cobranca.yaml sem campos extras
@@ -149,13 +134,11 @@ elements:
                 name: PixChargeRepository
                 path: src/payments/pix/pix-charge.repository.ts
                 status: new
-                detail: delegated
                 description: Grava e busca cobranças por txid
           - id: webhook-receiver
             type: component
             name: Webhook Receiver
             status: new
-            detail: locked
             constraints:
               - Validar assinatura mTLS do PSP antes de qualquer processamento
               - Responder 200 em < 2s; processamento assíncrono via fila
@@ -165,7 +148,6 @@ elements:
                 name: PspWebhookController
                 path: src/payments/pix/webhook.controller.ts
                 status: new
-                detail: locked
                 description: Endpoint chamado pelo PSP; valida, publica e responde rápido
                 constraints:
                   - Nada de I/O além de validar e publicar antes de responder
@@ -174,14 +156,12 @@ elements:
                 name: verifyPspSignature
                 path: src/payments/pix/verify-signature.ts
                 status: new
-                detail: locked
                 description: Confere certificado mTLS e assinatura do corpo
               - id: payment-event-publisher
                 type: code
                 name: PaymentEventPublisher
                 path: src/payments/events/publisher.ts
                 status: new
-                detail: delegated
                 description: Publica PaymentConfirmed na fila
           - id: card-handler
             type: component
@@ -194,7 +174,6 @@ elements:
         name: Orders DB
         tech: PostgreSQL
         status: changed
-        detail: guided
         constraints:
           - Migração aditiva (coluna pix_txid nullable), sem lock de tabela
         children:
@@ -202,7 +181,6 @@ elements:
             type: component
             name: Tabela orders
             status: changed
-            detail: guided
             description: Ganha pix_txid (nullable, índice único parcial)
             constraints:
               - Índice criado com CREATE INDEX CONCURRENTLY
@@ -212,14 +190,12 @@ elements:
                 name: add_pix_txid
                 path: db/migrations/20261106_add_pix_txid.sql
                 status: new
-                detail: locked
                 description: ADD COLUMN pix_txid + índice único parcial
               - id: order-model
                 type: code
                 name: Order
                 path: src/orders/order.model.ts
                 status: changed
-                detail: delegated
                 description: Modelo ganha pixTxid opcional
 
       # ------------------------------------------------------------ fila
@@ -228,13 +204,11 @@ elements:
         name: payment-events
         tech: SQS
         status: new
-        detail: delegated
         children:
           - id: payment-confirmed-event
             type: component
             name: PaymentConfirmed
             status: new
-            detail: locked
             description: Evento de pagamento confirmado
             constraints:
               - Carrega orderId, txid e valor; mudanças só aditivas
@@ -244,7 +218,6 @@ elements:
                 name: PaymentConfirmed schema
                 path: packages/events/payment-confirmed.ts
                 status: new
-                detail: locked
                 description: Tipo e validação do evento, compartilhado por quem publica e quem consome
 
       # ------------------------------------------------------------ Order Worker
@@ -253,14 +226,12 @@ elements:
         name: Order Worker
         tech: Node.js
         status: changed
-        detail: delegated
         description: Confirma o pedido ao consumir eventos de pagamento
         children:
           - id: payment-events-consumer
             type: component
             name: Payment Events Consumer
             status: new
-            detail: guided
             description: Lê payment-events e confirma o pedido
             constraints:
               - Idempotente por txid; evento repetido não confirma duas vezes
@@ -270,7 +241,6 @@ elements:
                 name: handlePaymentConfirmed
                 path: apps/worker/src/handlers/payment-confirmed.ts
                 status: new
-                detail: guided
                 description: Valida o evento e chama a confirmação do pedido
                 constraints:
                   - Mensagem inválida vai para a DLQ, sem retentar
@@ -278,7 +248,6 @@ elements:
             type: component
             name: Order Confirmation
             status: changed
-            detail: guided
             description: Confirmação do pedido (existente), agora também via evento
             constraints:
               - Mesma regra de confirmação do cartão; só muda quem chama
@@ -288,7 +257,6 @@ elements:
                 name: confirmOrder
                 path: apps/worker/src/orders/confirm-order.ts
                 status: changed
-                detail: delegated
                 description: Aceita confirmação por txid além do id da transação de cartão
 
   - id: psp

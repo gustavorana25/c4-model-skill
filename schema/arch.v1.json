@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://c4plan.dev/schema/arch.v1.json",
   "title": "C4 Plan — arquitetura de um plano (v1)",
-  "description": "Camada visual de um plano de implementação: quais elementos C4 o plano toca, o que muda, e quanta liberdade a IA tem em cada um.",
+  "description": "Camada visual de um plano de implementação: quais elementos C4 o plano toca, o que muda e como o sistema funciona depois dele.",
   "type": "object",
   "required": ["version", "plan", "elements"],
   "additionalProperties": false,
@@ -44,10 +44,6 @@
       "default": "unchanged",
       "description": "O que o plano faz com este elemento."
     },
-    "detail": {
-      "enum": ["locked", "guided", "delegated"],
-      "description": "locked: humano definiu, IA não altera. guided: IA implementa seguindo as constraints. delegated: IA decide o design interno."
-    },
     "element": {
       "type": "object",
       "required": ["id", "type", "name"],
@@ -63,8 +59,8 @@
         "tech": { "type": "string" },
         "path": { "type": "string", "description": "Arquivo no repositório (útil em code), ex.: src/payments/pix/create-charge.ts" },
         "status": { "$ref": "#/$defs/status" },
-        "detail": { "$ref": "#/$defs/detail" },
         "constraints": { "type": "array", "items": { "type": "string" } },
+        "detail": { "deprecated": true, "description": "Obsoleto: ignorado. O que a IA deve respeitar fica em constraints." },
         "notes": { "type": "string", "description": "Comentário do humano feito na revisão." },
         "reviewed": { "type": "boolean", "description": "Marcado pelo humano no viewer quando revisou o elemento." },
         "children": {

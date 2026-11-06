@@ -5,18 +5,18 @@ import { memo } from "react";
 import type { ElementFlowNode } from "../../lib/layout";
 import { STATUS_META, TYPE_META } from "../../lib/meta";
 import { statusOf } from "../../lib/model";
-import type { ArchElement, Status } from "../../lib/types";
+import type { Status } from "../../lib/types";
 import { useStore } from "../../store";
-import { cn, DetailPill, StatusPill } from "../ui";
+import { cn, StatusPill } from "../ui";
 
 const hidden = "!pointer-events-none !opacity-0 !min-h-0 !min-w-0 !size-1 !border-0";
 
 /** Mesma regra que nodeHeight() usa para reservar a linha de selos. */
-const hasFooter = (el: ArchElement, st: Status, children: boolean) => st !== "unchanged" || !!el.detail || children;
+const hasFooter = (st: Status, children: boolean) => st !== "unchanged" || children;
 
 export const ElementNode = memo(function ElementNode({ data }: NodeProps<ElementFlowNode>) {
   const { el, dim, selected, hasChildren, commentTarget, flowActive } = data;
-  const setFocus = useStore((s) => s.setFocus);
+  const toggleExpanded = useStore((s) => s.toggleExpanded);
   const st = statusOf(el);
   const T = TYPE_META[el.type];
   const S = STATUS_META[st];
@@ -56,18 +56,18 @@ export const ElementNode = memo(function ElementNode({ data }: NodeProps<Element
       </div>
       <div className={cn("mt-1 shrink-0 text-[14.5px] font-semibold leading-[19px] text-fg", st === "removed" && "line-through")}>{el.name}</div>
       {el.description && <div className="mt-1 line-clamp-2 shrink-0 text-[12px] leading-4 text-muted">{el.description}</div>}
-      {hasFooter(el, st, hasChildren) && (
+      {hasFooter(st, hasChildren) && (
       <div className="mt-auto flex shrink-0 items-center gap-1.5 pt-2">
         {st !== "unchanged" && <StatusPill status={st} upper />}
-        {el.detail && <DetailPill detail={el.detail} />}
         {hasChildren && (
           <button
             type="button"
             className="nodrag ml-auto flex cursor-pointer items-center gap-0.5 rounded-full bg-[#22304A] px-2 py-px text-[11px] font-semibold leading-[18px] text-accent-ink transition hover:bg-[#2B3C5C]"
             onClick={(e) => {
               e.stopPropagation();
-              setFocus(el.id);
+              toggleExpanded(el.id);
             }}
+            title="Abrir aqui, sem sair do diagrama (duplo clique também)"
           >
             Abrir <ChevronRight size={12} strokeWidth={2.6} />
           </button>

@@ -67,6 +67,19 @@ body {
 .react-flow__edge {
   cursor: pointer;
 }
+/* canvas único: ao abrir/fechar caixas, elas deslizam até a posição nova e as setas reaparecem depois */
+.relayout .react-flow__node {
+  transition: transform 0.35s ease, width 0.35s ease, height 0.35s ease;
+}
+.relayout .react-flow__edges,
+.relayout .react-flow__edgelabel-renderer {
+  opacity: 0;
+}
+.react-flow__edges,
+.react-flow__edgelabel-renderer {
+  transition: opacity 0.25s ease 0.1s;
+}
+
 /* modo comentário: o cursor vira um balão, como no Figma */
 .commenting .react-flow__pane,
 .commenting .react-flow__node-element {

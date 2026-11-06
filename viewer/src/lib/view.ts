@@ -1,4 +1,4 @@
-import { ancestors, isWithin, statusOf, type Model } from "./model";
+import { ancestors, hasChanges, hasChildren, isWithin, statusOf, type Model } from "./model";
 import type { ArchDoc, ArchElement, Relation, Status } from "./types";
 
 export interface ViewEdge {
@@ -13,6 +13,10 @@ export interface View {
   focus: string | null;
   /** Caminho da raiz até o foco (todos viram boundaries). */
   chain: string[];
+  /** Caixas abertas no lugar (além do caminho do foco): também viram boundaries. */
+  open: Set<string>;
+  /** Boundary pai de cada boundary (null = raiz do desenho). */
+  boundaryParent: Map<string, string | null>;
   /** Filhos diretos do foco (ou elementos da raiz). */
   inside: Set<string>;
   boundaries: ArchElement[];
@@ -32,16 +36,31 @@ function aggregateStatus(rels: Relation[]): Status {
 }
 
 /**
- * Monta a view C4 focada em `focus` (null = visão geral).
+ * Monta a view C4 focada em `focus` (null = visão geral), com as caixas de `expanded`
+ * abertas no lugar: elas viram boundaries e os filhos aparecem dentro, em qualquer nível.
  * - Os filhos do foco aparecem sempre.
  * - Elementos de fora aparecem só se tiverem relação com algo dentro do foco,
  *   no nível dos irmãos do foco/ancestrais.
  * - Relações entre elementos profundos são "elevadas" para as caixas visíveis e agregadas.
  */
-export function computeView(doc: ArchDoc, m: Model, focus: string | null): View {
+export function computeView(doc: ArchDoc, m: Model, focus: string | null, expanded: ReadonlySet<string> = new Set()): View {
   const chain = focus ? [...ancestors(m, focus).reverse(), focus] : [];
   const focusEl = focus ? m.index.get(focus) : undefined;
   const inside = new Set((focusEl ? focusEl.children ?? [] : doc.elements).map((e) => e.id));
+  // abre no lugar o que está expandido dentro do foco: a caixa sai e os filhos entram
+  const open = new Set<string>();
+  const queue = [...inside];
+  while (queue.length) {
+    const id = queue.shift()!;
+    const el = m.index.get(id);
+    if (!el || !expanded.has(id) || !hasChildren(el)) continue;
+    open.add(id);
+    inside.delete(id);
+    for (const c of el.children!) {
+      inside.add(c.id);
+      queue.push(c.id);
+    }
+  }
 
   const candidates = new Set(inside);
   if (focus) {
@@ -53,7 +72,7 @@ export function computeView(doc: ArchDoc, m: Model, focus: string | null): View 
     let cur: string | null = id;
     while (cur) {
       if (candidates.has(cur)) return cur;
-      if (chain.includes(cur)) return null;
+      if (chain.includes(cur) || open.has(cur)) return null;
       cur = m.parent.get(cur) ?? null;
     }
     return null;
@@ -75,18 +94,39 @@ export function computeView(doc: ArchDoc, m: Model, focus: string | null): View 
   const visible = new Set(inside);
   for (const e of edges.values()) visible.add(e.from).add(e.to);
 
+  const isBox = (id: string | null): id is string => !!id && (chain.includes(id) || open.has(id));
   const containerOf = (id: string) => {
     const p = m.parent.get(id) ?? null;
-    return p && chain.includes(p) ? p : null;
+    return isBox(p) ? p : null;
   };
+  // pais antes dos filhos, para o layout montar o aninhamento
+  const boxes = [...chain, ...[...open].sort((a, b) => ancestors(m, a).length - ancestors(m, b).length)];
+  const boundaryParent = new Map(boxes.map((id) => [id, containerOf(id)]));
 
   return {
     focus,
     chain,
+    open,
+    boundaryParent,
     inside,
     toVisible,
-    boundaries: chain.map((id) => m.index.get(id)!),
+    boundaries: boxes.map((id) => m.index.get(id)!),
     nodes: [...visible].map((id) => ({ el: m.index.get(id)!, container: containerOf(id) })),
     edges: [...edges.values()],
   };
+}
+
+/** Abertura inicial: tudo que o plano toca, até mostrar os componentes (o código fica fechado). */
+export function defaultExpanded(m: Model): Set<string> {
+  const out = new Set<string>();
+  for (const el of m.index.values())
+    if (el.type !== "component" && hasChildren(el) && hasChanges(el)) out.add(el.id);
+  return out;
+}
+
+/** Abre os ancestrais de `id` para ele aparecer como caixa. */
+export function revealing(m: Model, expanded: ReadonlySet<string>, id: string): Set<string> {
+  const out = new Set(expanded);
+  ancestors(m, id).forEach((a) => out.add(a));
+  return out;
 }

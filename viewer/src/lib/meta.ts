@@ -1,8 +1,8 @@
 import {
-  AppWindow, Bot, FileCode2, Box, Boxes, Circle, Cog, Compass, Database, Globe, Lock, MessagesSquare, PencilLine, Puzzle, Server, Smartphone,
+  AppWindow, FileCode2, Box, Boxes, Circle, Cog, Database, Globe, MessagesSquare, PencilLine, Puzzle, Server, Smartphone,
   Sparkles, Trash2, User, type LucideIcon,
 } from "lucide-react";
-import type { ArchElement, Detail, ElementType, Status } from "./types";
+import type { ArchElement, ElementType, Status } from "./types";
 
 /** `label` curto vai no card; `ink` é a cor do rótulo de tipo. */
 export const TYPE_META: Record<ElementType, { label: string; icon: LucideIcon; ink: string; card: string }> = {
@@ -23,28 +23,6 @@ export const STATUS_META: Record<Status, { label: string; icon: LucideIcon; stro
   unchanged: { label: "Inalterado", icon: Circle, stroke: "#5A6375", ink: "#A3ACBB", soft: "rgba(163,172,187,.10)" },
 };
 
-export const DETAIL_META: Record<Detail, { label: string; icon: LucideIcon; help: string; ink: string }> = {
-  locked: {
-    label: "Locked",
-    icon: Lock,
-    help: "Fixo. A IA não altera estrutura, contratos nem tecnologia; se precisar, ela para e pergunta.",
-    ink: "#FFB4B4",
-  },
-  guided: {
-    label: "Guided",
-    icon: Compass,
-    help: "A IA implementa seguindo as restrições abaixo; o resto ela decide pelo mais simples.",
-    ink: "#8FD3FF",
-  },
-  delegated: {
-    label: "Delegated",
-    icon: Bot,
-    help: "A IA decide o design interno. As restrições continuam valendo.",
-    ink: "#C9B8FF",
-  },
-};
-
-export const DETAILS = Object.keys(DETAIL_META) as Detail[];
 
 // Ícone de container inferido da tecnologia/nome, para "Web App" não parecer igual a "Order Worker".
 const CONTAINER_ICONS: [RegExp, LucideIcon][] = [

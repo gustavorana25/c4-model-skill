@@ -1,11 +1,11 @@
 import { readFileSync } from "node:fs";
 import { load } from "js-yaml";
 import { describe, expect, test } from "vitest";
-import { hopFocus, hopRelation } from "./flow";
+import { hopRelation, hopVisible } from "./flow";
 import { flowMarks } from "./highlight";
 import { buildModel } from "./model";
 import type { ArchDoc } from "./types";
-import { computeView } from "./view";
+import { computeView, defaultExpanded, revealing } from "./view";
 
 const doc = load(readFileSync(new URL("../../../examples/pix.arch.yaml", import.meta.url), "utf8")) as ArchDoc;
 const m = buildModel(doc);
@@ -20,13 +20,12 @@ describe("fluxos", () => {
     expect(hopRelation(doc, { from: "psp", to: "psp-client" })).toMatchObject({ reverse: true, rel: { from: "psp-client", to: "psp" } });
   });
 
-  test("cada salto desce até o nível em que vira seta", () => {
-    // os dois no mesmo componente: abre o componente
-    expect(hopFocus(doc, m, { from: "payments-controller", to: "method-registry" })).toBe("payment-router");
-    // código ↔ externo: abre o componente do código
-    expect(hopFocus(doc, m, { from: "psp-client", to: "psp" })).toBe("pix-handler");
-    // pessoa → código da web: abre o componente da tela
-    expect(hopFocus(doc, m, { from: "cliente", to: "checkout-page-view" })).toBe("checkout-page");
+  test("abrir as caixas das duas pontas transforma cada salto em seta", () => {
+    for (const f of doc.flows!)
+      for (const h of f.hops) {
+        const exp = revealing(m, revealing(m, defaultExpanded(m), h.from), h.to);
+        expect(hopVisible(computeView(doc, m, null, exp), h), `${f.id}: ${h.from} → ${h.to}`).toBe(true);
+      }
   });
 
   test("marca os saltos já percorridos e o atual", () => {

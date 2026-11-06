@@ -63,12 +63,9 @@ check("salto de fluxo com id inexistente", any("não existe" in e for e in broke
 check("brief lista os fluxos", "## Fluxos" in A.brief(doc) and "devolve QR Code" in A.brief(doc))
 check("step tocando id inexistente", any("não existe" in e for e in broken(
     lambda d: d["steps"].append({"id": "s9", "title": "x", "touches": ["nada"]}))))
-check("detail inválido", len(broken(
-    lambda d: d["elements"][1]["children"][0].update(detail="talvez"))) > 0)
+check("detail antigo vira aviso", any("'detail' não é mais usado" in w for w in A.validate(
+    {**doc, "elements": [{"id": "x", "type": "person", "name": "X", "detail": "locked"}]})[1]))
 
-d = copy.deepcopy(doc)
-d["elements"][1]["children"][1]["children"][1].pop("detail")
-check("aviso: new sem detail", any("sem detail" in w for w in A.validate(d)[1]))
 
 check("exemplo abre tudo que muda", not any("sem children" in w for w in A.validate(doc)[1]))
 d = copy.deepcopy(doc)

@@ -3,7 +3,7 @@ import { ArrowRight } from "lucide-react";
 import { STATUS_META, TYPE_META } from "../../lib/meta";
 import { statusOf } from "../../lib/model";
 import { useStore } from "../../store";
-import { DetailPill, SectionTitle } from "../ui";
+import { SectionTitle } from "../ui";
 
 const KINDS = ["new", "changed", "removed"] as const;
 
@@ -65,7 +65,6 @@ export function Summary() {
                             {e.tech && ` · ${e.tech}`}
                           </span>
                         </span>
-                        {e.detail && <DetailPill detail={e.detail} />}
                         <ArrowRight size={14} className="shrink-0 text-subtle transition group-hover:translate-x-0.5 group-hover:text-fg" />
                       </button>
                     </li>
@@ -82,7 +81,7 @@ export function Summary() {
         <SectionTitle>Como usar</SectionTitle>
         <ol className="flex flex-col gap-3">
           {[
-            ["Veja o que muda", "Verde é novo, laranja é alterado, tracejado é removido. Use “Abrir” para descer de nível."],
+            ["Veja o que muda", "Verde é novo, laranja é alterado, tracejado é removido. “Abrir” (ou duplo clique) abre a caixa no lugar; “Fechar” recolhe."],
             ["Siga um fluxo", "Na aba Fluxos, avance salto a salto (← →) e veja como o sistema funciona depois do plano."],
             ["Veja a ordem de construção", "Na aba Passos, cada passo acende os elementos que ele toca."],
             ["Pergunte ou peça mudança", "Aperte C, clique nos cards e escreva. A conversa acontece no chat."],

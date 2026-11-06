@@ -35,7 +35,6 @@ TYPES = {"person", "system", "external", "container", "database", "queue", "comp
 STATUSES = {"new", "changed", "removed", "unchanged"}
 # tipos que, quando o plano os cria ou altera, precisam abrir um nível abaixo (até chegar em code)
 OPENABLE = {"system", "container", "database", "queue", "component"}
-DETAILS = {"locked", "guided", "delegated"}
 # tipo do filho -> tipos de pai permitidos (None = pode ficar na raiz)
 ALLOWED_PARENTS = {
     "person": {None},
@@ -127,8 +126,8 @@ def validate(doc) -> tuple[list[str], list[str]]:
                 errors.append(f"{p}: name obrigatório")
             if el.get("status", "unchanged") not in STATUSES:
                 errors.append(f"{p}: status inválido '{el.get('status')}'")
-            if "detail" in el and el["detail"] not in DETAILS:
-                errors.append(f"{p}: detail inválido '{el['detail']}'")
+            if "detail" in el:
+                warnings.append(f"{p}: 'detail' não é mais usado; remova (as constraints dizem o que a IA deve seguir)")
 
             ptype = parent.get("type") if parent else None
             allowed = ALLOWED_PARENTS.get(etype, set())
@@ -225,10 +224,7 @@ def validate(doc) -> tuple[list[str], list[str]]:
     has_steps = bool(doc.get("steps"))
     for eid, el in elements.items():
         st = el.get("status", "unchanged")
-        implementable = el.get("type") not in ("person", "external", "system")
         if st in ("new", "changed"):
-            if implementable and "detail" not in el:
-                warnings.append(f"{eid}: status '{st}' sem detail — defina locked/guided/delegated")
             # um step que toca o pai (ex.: o componente) também cobre o código dentro dele
             anc, p = [], parent_of.get(eid)
             while p:
@@ -241,8 +237,6 @@ def validate(doc) -> tuple[list[str], list[str]]:
             if el.get("type") in OPENABLE and not el.get("children"):
                 below = "code" if el["type"] == "component" else "component"
                 warnings.append(f"{eid}: status '{st}' sem children — o humano não consegue abrir; detalhe com '{below}'")
-        if el.get("detail") == "guided" and not el.get("constraints"):
-            warnings.append(f"{eid}: detail 'guided' sem constraints — o que a IA deve seguir?")
 
     return errors, warnings
 
@@ -284,11 +278,6 @@ TYPE_PT = {"person": "pessoa", "system": "sistema", "external": "sistema externo
            "database": "banco de dados", "queue": "fila", "component": "componente",
            "code": "código"}
 STATUS_PT = {"new": "novo", "changed": "alterado", "removed": "removido", "unchanged": "inalterado"}
-DETAIL_RULE = {
-    "locked": "🔒 locked — não altere estrutura, contrato nem tecnologia. Se precisar, PARE e pergunte.",
-    "guided": "🧭 guided — implemente seguindo as restrições.",
-    "delegated": "🤖 delegated — design interno a seu critério (restrições listadas continuam valendo).",
-}
 
 
 def brief(doc: dict, url: str | None = None) -> str:
@@ -312,8 +301,10 @@ def brief(doc: dict, url: str | None = None) -> str:
         out += ["", f"Diagrama: {url}"]
     if doc.get("description"):
         out += ["", doc["description"].strip()]
-    out += ["", "## Regras de liberdade", ""] + [f"- {r}" for r in DETAIL_RULE.values()]
-    out += ["- Sem nível definido: trate como 🧭 guided e pergunte se houver dúvida de design.",
+    out += ["", "## Regras", "",
+            "- Restrições são obrigatórias. Se a implementação exigir quebrar uma, PARE e pergunte.",
+            "- Contratos referenciados (`contract`) não mudam sem perguntar.",
+            "- Fora das restrições, prefira o mais simples e siga o padrão do código existente.",
             "- Notas do revisor são instruções do humano e têm prioridade."]
 
     def element_block(el: dict) -> list[str]:
@@ -322,8 +313,6 @@ def brief(doc: dict, url: str | None = None) -> str:
         lines = [f"- **{el['name']}** (`{el['id']}` · {TYPE_PT.get(el['type'], el['type'])}{tech} · {STATUS_PT[st]})"]
         if el.get("path"):
             lines.append(f"  - Arquivo: `{el['path']}`")
-        if el.get("detail"):
-            lines.append(f"  - {DETAIL_RULE[el['detail']]}")
         for c in el.get("constraints") or []:
             lines.append(f"  - Restrição: {c}")
         if el.get("notes"):

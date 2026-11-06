@@ -17,7 +17,7 @@ export type ElementNodeData = {
   /** Ponta do salto atual do fluxo aberto. */
   flowActive?: boolean;
 };
-export type BoundaryNodeData = { el: ArchElement; isFocus: boolean };
+export type BoundaryNodeData = { el: ArchElement; isFocus: boolean; /** Aberta no lugar (dá para fechar). */ open: boolean };
 export type RelationEdgeData = {
   edge: ViewEdge;
   points: { x: number; y: number }[];
@@ -43,7 +43,7 @@ export function nodeHeight(el: ArchElement): number {
   const usable = NODE_W - 28;
   const nameLines = Math.max(1, Math.ceil((el.name.length * 8.4) / usable));
   const descLines = el.description ? Math.min(2, Math.ceil((el.description.length * 6.5) / usable)) : 0;
-  const badges = el.status && el.status !== "unchanged" ? true : !!el.detail || hasChildren(el);
+  const badges = el.status && el.status !== "unchanged" ? true : hasChildren(el);
   return 24 + 16 + 4 + nameLines * 19 + (descLines ? 4 + descLines * 16 : 0) + (badges ? 30 : 4);
 }
 
@@ -81,7 +81,7 @@ export async function layoutView(view: View): Promise<{ nodes: FlowNode[]; edges
   const byId = new Map<string, ElkNode>([["root", root]]);
   for (const b of view.boundaries) {
     const n: ElkNode = { id: b.id, children: [], layoutOptions: { "elk.padding": "[top=52,left=28,bottom=28,right=28]" } };
-    const p = view.chain[view.chain.indexOf(b.id) - 1];
+    const p = view.boundaryParent.get(b.id);
     (p ? byId.get(p)! : root).children!.push(n);
     byId.set(b.id, n);
   }
@@ -102,7 +102,7 @@ export async function layoutView(view: View): Promise<{ nodes: FlowNode[]; edges
 
   const abs = new Map<string, { x: number; y: number }>([["root", { x: 0, y: 0 }]]);
   const nodes: FlowNode[] = [];
-  const boundaryIds = new Set(view.chain);
+  const boundaryIds = new Set(view.boundaries.map((b) => b.id));
   const walk = (n: ElkNode, ox: number, oy: number, parentId: string | undefined) => {
     for (const c of n.children ?? []) {
       const x = c.x ?? 0;
@@ -119,7 +119,7 @@ export async function layoutView(view: View): Promise<{ nodes: FlowNode[]; edges
           height: c.height,
           selectable: false,
           zIndex: 0,
-          data: { el, isFocus: c.id === view.focus },
+          data: { el, isFocus: c.id === view.focus, open: view.open.has(c.id) },
         });
         walk(c, ox + x, oy + y, c.id);
       } else {

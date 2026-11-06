@@ -69,7 +69,7 @@ export function computeDimmer(
     const vis = new Set([...touched].map(view.toVisible).filter((x): x is string => !!x));
     // passo que toca a própria boundary: os filhos dela contam
     for (const t of touched)
-      if (view.chain.includes(t)) view.inside.forEach((i) => isWithin(m, i, t) && vis.add(i));
+      if (view.chain.includes(t) || view.open.has(t)) view.inside.forEach((i) => isWithin(m, i, t) && vis.add(i));
     return {
       node: (id) => !vis.has(id),
       edge: (e) => !e.rels.some((r) => touched.has(r.from) || touched.has(r.to)),

@@ -1,7 +1,6 @@
 // Espelha schema/arch.v1.json
 export type ElementType = "person" | "system" | "external" | "container" | "database" | "queue" | "component" | "code";
 export type Status = "new" | "changed" | "removed" | "unchanged";
-export type Detail = "locked" | "guided" | "delegated";
 
 export interface ArchElement {
   id: string;
@@ -12,7 +11,6 @@ export interface ArchElement {
   /** Arquivo no repositório; usado principalmente em code (nível 4). */
   path?: string;
   status?: Status;
-  detail?: Detail;
   constraints?: string[];
   notes?: string;
   /** Marcado pelo humano no viewer. */

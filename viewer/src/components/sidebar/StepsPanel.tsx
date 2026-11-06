@@ -1,6 +1,6 @@
 import { ElementIcon } from "../ElementIcon";
 import { FileText } from "lucide-react";
-import { DETAIL_META, TYPE_META } from "../../lib/meta";
+import { TYPE_META } from "../../lib/meta";
 import { useStore } from "../../store";
 import { cn } from "../ui";
 
@@ -43,7 +43,6 @@ export function StepsPanel() {
                 {s.description && <p className="text-[12.5px] text-muted">{s.description}</p>}
                 {touched.map((el) => {
                   const T = TYPE_META[el.type];
-                  const D = el.detail ? DETAIL_META[el.detail] : null;
                   const contracts = (doc.relations ?? []).filter((r) => (r.from === el.id || r.to === el.id) && r.contract);
                   return (
                     <button
@@ -56,13 +55,7 @@ export function StepsPanel() {
                         <b className="flex items-center gap-1.5 text-[13px] text-fg">
                           <ElementIcon el={el} size={13} style={{ color: T.ink }} /> {el.name}
                         </b>
-                        {D ? (
-                          <span className="rounded-full bg-chip px-2 text-[11px] font-semibold leading-[18px]" style={{ color: D.ink }}>
-                            {D.label}
-                          </span>
-                        ) : (
-                          <span className="text-[11px] text-subtle">{T.label.toLowerCase()}</span>
-                        )}
+                        <span className="text-[11px] text-subtle">{T.label.toLowerCase()}</span>
                       </span>
                       {!!el.constraints?.length && (
                         <span className="text-[12.5px] leading-relaxed text-muted">{el.constraints.join(" · ")}</span>

@@ -26,7 +26,7 @@ export function FlowsPanel() {
       </p>
       <label className="mx-2 mb-2.5 flex cursor-pointer items-center gap-2 text-[12.5px] text-fg-2">
         <input type="checkbox" checked={follow} onChange={toggleFollow} className="accent-[#4F7DF3]" />
-        Descer até o nível de cada salto
+        Abrir as caixas de cada salto
       </label>
       {flows.map((f) => {
         const on = flow?.id === f.id;

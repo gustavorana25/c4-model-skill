@@ -1,10 +1,10 @@
 import { Background, BackgroundVariant, MiniMap, ReactFlow, useReactFlow, type EdgeTypes, type NodeTypes } from "@xyflow/react";
-import { ChevronLeft, ChevronRight, Filter, Home, Maximize2, Minus, Plus, Route, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, Filter, Home, Maximize2, Minus, Plus, Route, Shrink, UnfoldVertical, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { hopLabel } from "../../lib/flow";
 import { computeDimmer, flowMarks } from "../../lib/highlight";
 import { layoutView, type FlowNode, type RelationFlowEdge } from "../../lib/layout";
-import { DETAIL_META, STATUS_META, levelLabel } from "../../lib/meta";
+import { STATUS_META, levelLabel } from "../../lib/meta";
 import { ancestors, statusOf, type Model } from "../../lib/model";
 import type { ArchDoc } from "../../lib/types";
 import { computeView } from "../../lib/view";
@@ -18,13 +18,32 @@ import { RelationEdge } from "./RelationEdge";
 const nodeTypes: NodeTypes = { element: ElementNode, boundary: BoundaryNode };
 const edgeTypes: EdgeTypes = { relation: RelationEdge };
 // espaço para as barras flutuantes (breadcrumb/toolbar em cima, legenda/minimapa embaixo)
+/** Abaixo disso o texto dos cards não dá para ler. */
+const MIN_READABLE_ZOOM = 0.55;
 const FIT_PADDING = { top: "84px", bottom: "72px", left: "32px", right: "32px" } as const;
 
 /** Só o que muda o tamanho/posição das caixas dispara um novo layout. */
-function layoutKey(doc: ArchDoc, focus: string | null) {
+/** Posição absoluta de cada caixa (o React Flow guarda posição relativa ao pai). */
+function absolutePositions(nodes: FlowNode[]) {
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  const out = new Map<string, { x: number; y: number }>();
+  const get = (id: string): { x: number; y: number } => {
+    const hit = out.get(id);
+    if (hit) return hit;
+    const n = byId.get(id)!;
+    const p = n.parentId && byId.has(n.parentId) ? get(n.parentId) : { x: 0, y: 0 };
+    const v = { x: p.x + n.position.x, y: p.y + n.position.y };
+    out.set(id, v);
+    return v;
+  };
+  nodes.forEach((n) => get(n.id));
+  return out;
+}
+
+function layoutKey(doc: ArchDoc, focus: string | null, expanded: ReadonlySet<string>) {
   const strip = (els: ArchDoc["elements"]): unknown =>
-    els.map((e) => [e.id, e.name, e.tech, e.description, e.type, e.status, !!e.detail, e.children ? strip(e.children) : 0]);
-  return JSON.stringify([focus, strip(doc.elements), doc.relations?.map((r) => [r.from, r.to, r.label, r.protocol, r.status])]);
+    els.map((e) => [e.id, e.name, e.tech, e.description, e.type, e.status, e.children ? strip(e.children) : 0]);
+  return JSON.stringify([focus, [...expanded].sort(), strip(doc.elements), doc.relations?.map((r) => [r.from, r.to, r.label, r.protocol, r.status])]);
 }
 
 export function Canvas() {
@@ -35,27 +54,82 @@ export function Canvas() {
   const pinnedStep = useStore((s) => s.pinnedStep);
   const onlyChanges = useStore((s) => s.onlyChanges);
   const select = useStore((s) => s.select);
-  const setFocus = useStore((s) => s.setFocus);
   const commenting = useStore((s) => s.commenting);
   const commentTargets = useStore((s) => s.commentTargets);
   const toggleTarget = useStore((s) => s.toggleCommentTarget);
   const flow = useStore((s) => s.flow);
+  const expanded = useStore((s) => s.expanded);
+  const camera = useStore((s) => s.camera);
+  const toggleExpanded = useStore((s) => s.toggleExpanded);
+  const rf = useReactFlow();
 
-  const view = useMemo(() => computeView(doc, model, focus), [doc, model, focus]);
-  const key = layoutKey(doc, focus);
-  const [laid, setLaid] = useState<{ focus: string | null; nodes: FlowNode[]; edges: RelationFlowEdge[] } | null>(null);
+  const view = useMemo(() => computeView(doc, model, focus, expanded), [doc, model, focus, expanded]);
+  const key = layoutKey(doc, focus, expanded);
+  const [laid, setLaid] = useState<{ key: string; focus: string | null; nodes: FlowNode[]; edges: RelationFlowEdge[] } | null>(null);
   const [layoutError, setLayoutError] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
     layoutView(view)
-      .then((r) => alive && (setLaid({ focus: view.focus, ...r }), setLayoutError(null)))
+      .then((r) => alive && (setLaid({ key, focus: view.focus, ...r }), setLayoutError(null)))
       .catch((e: Error) => alive && setLayoutError(e.message));
     return () => {
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
+
+  // Câmera: ao abrir/fechar, a caixa fica no mesmo lugar da tela; num salto de fluxo, o salto é
+  // enquadrado. Espera o layout da view atual ficar pronto. As caixas deslizam até a posição nova (CSS).
+  const curAbs = useRef(new Map<string, { x: number; y: number }>());
+  const pending = useRef<{ cam: NonNullable<typeof camera>; before: Map<string, { x: number; y: number }> } | null>(null);
+  const handled = useRef(0);
+  const keyRef = useRef(key);
+  keyRef.current = key;
+  const [moving, setMoving] = useState(false);
+  const wrap = useRef<HTMLDivElement>(null);
+  const runCamera = () => {
+    const p = pending.current;
+    if (!p || !laid || laid.key !== keyRef.current) return;
+    pending.current = null;
+    const { cam, before } = p;
+    if (cam.kind === "anchor") {
+      const a = before.get(cam.ids[0]);
+      const b = curAbs.current.get(cam.ids[0]);
+      if (!a || !b) return;
+      const vp = rf.getViewport();
+      rf.setViewport({ x: vp.x - (b.x - a.x) * vp.zoom, y: vp.y - (b.y - a.y) * vp.zoom, zoom: vp.zoom }, { duration: 350 });
+    } else {
+      const ids = [...new Set(cam.ids.map(view.toVisible).filter((x): x is string => !!x))];
+      // espera o React Flow medir as caixas novas
+      setTimeout(() => {
+        // duas pontas longe uma da outra ficariam ilegíveis: enquadra só a primeira (a mais profunda)
+        const box = wrap.current?.getBoundingClientRect();
+        const b = rf.getNodesBounds(ids);
+        const zoom = box ? Math.min(box.width / (b.width * 1.7), box.height / (b.height * 1.7)) : 1;
+        const target = zoom < MIN_READABLE_ZOOM ? ids.slice(0, 1) : ids;
+        rf.fitView({ nodes: target.map((id) => ({ id })), padding: 0.35, maxZoom: 1.1, duration: 400 });
+      }, 60);
+    }
+  };
+  useEffect(() => {
+    if (!camera || camera.at <= handled.current) return;
+    handled.current = camera.at;
+    pending.current = { cam: camera, before: curAbs.current };
+    runCamera();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [camera]);
+  useEffect(() => {
+    if (!laid) return;
+    const first = curAbs.current.size === 0;
+    curAbs.current = absolutePositions(laid.nodes);
+    if (!first) {
+      setMoving(true);
+      setTimeout(() => setMoving(false), 380);
+    }
+    runCamera();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [laid]);
 
   const marks = useMemo(() => (flow ? flowMarks(doc, view, flow.id, flow.hop) : null), [doc, view, flow]);
   const dimmer = useMemo(
@@ -92,7 +166,7 @@ export function Canvas() {
   );
 
   return (
-    <div className={cn("relative h-full w-full", commenting && "commenting")}>
+    <div ref={wrap} className={cn("relative h-full w-full", commenting && "commenting", moving && "relayout")}>
       {/* remonta a cada nível: o fitView inicial do React Flow enquadra depois de medir os nós */}
       <ReactFlow
         key={laid ? (laid.focus ?? "__root") : "__loading"}
@@ -111,7 +185,7 @@ export function Canvas() {
         maxZoom={2.5}
         proOptions={{ hideAttribution: true }}
         onNodeClick={(_, n) => n.type === "element" && (commenting ? toggleTarget(n.id) : select({ kind: "el", id: n.id }))}
-        onNodeDoubleClick={(_, n) => n.type === "element" && n.data.hasChildren && setFocus(n.id)}
+        onNodeDoubleClick={(_, n) => n.type === "element" && n.data.hasChildren && toggleExpanded(n.id)}
         onEdgeClick={(_, e) => !commenting && select({ kind: "edge", id: e.id })}
         onPaneClick={() => !commenting && select(null)}
       >
@@ -157,6 +231,7 @@ function Breadcrumbs({ model, focus }: { model: Model; focus: string | null }) {
   const setFocus = useStore((s) => s.setFocus);
   const chain = focus ? [...ancestors(model, focus).reverse(), focus] : [];
   const focusType = focus ? model.index.get(focus)!.type : null;
+  const openCount = useStore((s) => s.expanded.size);
   return (
     <nav aria-label="Nível" className={cn(floating, "flex min-w-0 flex-wrap items-center gap-1 p-1 text-[13px]")}>
       <button
@@ -189,7 +264,7 @@ function Breadcrumbs({ model, focus }: { model: Model; focus: string | null }) {
         );
       })}
       <span className="ml-1.5 mr-1 rounded-md bg-[#161D2A] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[.04em] text-muted">
-        {levelLabel(focusType)}
+        {!focus && openCount ? `${openCount} caixas abertas` : levelLabel(focusType)}
       </span>
     </nav>
   );
@@ -199,6 +274,8 @@ function Toolbar() {
   const rf = useReactFlow();
   const onlyChanges = useStore((s) => s.onlyChanges);
   const toggle = useStore((s) => s.toggleOnlyChanges);
+  const expandChanged = useStore((s) => s.expandChanged);
+  const collapseAll = useStore((s) => s.collapseAll);
   const btn = "flex size-9 cursor-pointer items-center justify-center rounded-lg text-fg-2 transition hover:bg-hover hover:text-fg";
   return (
     <div className={cn(floating, "ml-auto flex items-center gap-1 p-1")}>
@@ -213,6 +290,12 @@ function Toolbar() {
         title="Apagar o que o plano não toca"
       >
         <Filter size={14} /> Só mudanças
+      </button>
+      <button type="button" className={btn} onClick={expandChanged} title="Abrir tudo que o plano muda" aria-label="Abrir tudo que o plano muda">
+        <UnfoldVertical size={16} />
+      </button>
+      <button type="button" className={btn} onClick={collapseAll} title="Fechar todas as caixas" aria-label="Fechar todas as caixas">
+        <Shrink size={15} />
       </button>
       <span className="mx-1 h-5 w-px bg-line-strong" />
       <button type="button" className={btn} onClick={() => rf.zoomOut({ duration: 200 })} aria-label="Diminuir zoom">
@@ -249,12 +332,6 @@ function Legend() {
           {STATUS_META[k].label}
         </span>
       ))}
-      <span className="h-3.5 w-px bg-line-strong" />
-      {Object.values(DETAIL_META).map((d) => (
-        <span key={d.label} className="flex items-center gap-1" style={{ color: d.ink }} title={d.help}>
-          <d.icon size={12} /> {d.label}
-        </span>
-      ))}
     </div>
   );
 }
@@ -265,7 +342,7 @@ function FlowBanner({ insideNode }: { insideNode: string | null }) {
   const flow = useStore((s) => s.flow);
   const setHop = useStore((s) => s.setHop);
   const openFlow = useStore((s) => s.openFlow);
-  const setFocus = useStore((s) => s.setFocus);
+  const toggleExpanded = useStore((s) => s.toggleExpanded);
   const fl = flow && doc.flows?.find((f) => f.id === flow.id);
   if (!fl || !flow) return null;
   const h = fl.hops[flow.hop];
@@ -300,7 +377,7 @@ function FlowBanner({ insideNode }: { insideNode: string | null }) {
       {insideNode && (
         <div className="pl-[22px] text-[12px] text-white/80">
           Acontece dentro de <b>{name(insideNode)}</b>.{" "}
-          <button type="button" className="cursor-pointer underline" onClick={() => setFocus(insideNode)}>
+          <button type="button" className="cursor-pointer underline" onClick={() => toggleExpanded(insideNode)}>
             Abrir
           </button>
         </div>

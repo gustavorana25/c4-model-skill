@@ -1,7 +1,7 @@
 import { ElementIcon } from "../ElementIcon";
 import { ArrowRight, ChevronRight, FileText, MessageCircle } from "lucide-react";
-import { DETAIL_META, TYPE_META } from "../../lib/meta";
-import { descendants, hasChildren, implementable, statusOf, type Model } from "../../lib/model";
+import { TYPE_META } from "../../lib/meta";
+import { descendants, hasChildren, statusOf, type Model } from "../../lib/model";
 import type { Relation } from "../../lib/types";
 import { useStore } from "../../store";
 import { Button, SectionTitle, StatusPill } from "../ui";
@@ -9,7 +9,8 @@ import { Button, SectionTitle, StatusPill } from "../ui";
 export function ElementDetails({ id }: { id: string }) {
   const doc = useStore((s) => s.doc)!;
   const model = useStore((s) => s.model)!;
-  const setFocus = useStore((s) => s.setFocus);
+  const toggleExpanded = useStore((s) => s.toggleExpanded);
+  const isOpen = useStore((s) => s.expanded.has(id));
   const el = model.index.get(id);
   if (!el) return null;
 
@@ -19,7 +20,6 @@ export function ElementDetails({ id }: { id: string }) {
   const steps = (doc.steps ?? []).map((s, i) => ({ s, i })).filter(({ s }) => s.touches.some((t) => ids.has(t)));
   const rels = (doc.relations ?? []).filter((r) => ids.has(r.from) !== ids.has(r.to) || r.from === id || r.to === id);
 
-  const D = el.detail ? DETAIL_META[el.detail] : null;
   const comment = () => useStore.getState().setCommenting(true, [el.id]);
 
   return (
@@ -38,28 +38,19 @@ export function ElementDetails({ id }: { id: string }) {
         {el.path && <code className="self-start break-all font-mono text-[12px] text-fg-2">{el.path}</code>}
         {el.description && <p className="mt-1 leading-relaxed text-[#B7C0D0]">{el.description}</p>}
         {hasChildren(el) && (
-          <Button variant="outline" size="sm" className="mt-1.5 self-start bg-[#161D2A]" onClick={() => setFocus(el.id)}>
-            Abrir {el.children!.length} {el.children!.length === 1 ? "elemento interno" : "elementos internos"} <ChevronRight size={14} />
+          <Button variant="outline" size="sm" className="mt-1.5 self-start bg-[#161D2A]" onClick={() => toggleExpanded(el.id)}>
+            {isOpen ? "Fechar no diagrama" : `Abrir ${el.children!.length} ${el.children!.length === 1 ? "elemento interno" : "elementos internos"}`}{" "}
+            <ChevronRight size={14} className={isOpen ? "-rotate-90" : ""} />
           </Button>
         )}
       </div>
 
-      {implementable(el) && (
+      {(!!el.constraints?.length || el.notes) && (
         <section>
-          <SectionTitle>Como a IA vai trabalhar aqui</SectionTitle>
+          <SectionTitle>Restrições</SectionTitle>
           <div className="rounded-xl border border-line bg-[#121824] px-3.5 py-3">
-            {D ? (
-              <>
-                <span className="flex items-center gap-1.5 text-[13.5px] font-semibold" style={{ color: D.ink }}>
-                  <D.icon size={15} /> {D.label}
-                </span>
-                <p className="mt-1 text-[13px] leading-relaxed text-muted">{D.help}</p>
-              </>
-            ) : (
-              <p className="text-[13px] leading-relaxed text-muted">Não definido. A IA trata como Guided e pergunta se tiver dúvida.</p>
-            )}
             {!!el.constraints?.length && (
-              <ul className="mt-3 flex flex-col gap-1.5 border-t border-line pt-3">
+              <ul className="flex flex-col gap-1.5">
                 {el.constraints.map((c, i) => (
                   <li key={i} className="flex gap-2 text-[13px] leading-relaxed text-fg-2">
                     <span className="mt-[7px] size-1.5 shrink-0 rounded-full bg-subtle" />
@@ -68,7 +59,9 @@ export function ElementDetails({ id }: { id: string }) {
                 ))}
               </ul>
             )}
-            {el.notes && <p className="mt-3 border-t border-line pt-3 text-[13px] leading-relaxed text-fg-2 whitespace-pre-line">{el.notes}</p>}
+            {el.notes && (
+              <p className={`text-[13px] leading-relaxed text-fg-2 whitespace-pre-line ${el.constraints?.length ? "mt-3 border-t border-line pt-3" : ""}`}>{el.notes}</p>
+            )}
           </div>
         </section>
       )}

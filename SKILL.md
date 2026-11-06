@@ -30,11 +30,7 @@ Regras:
 - Relações ligam os elementos **mais específicos** (code → code quando existe). O viewer agrega para os níveis acima.
 - `steps`: um por passo do plano, mesma ordem e título. `touches` = elementos que o passo cria ou altera.
 - `flows`: como o sistema **funciona** depois do plano (os `steps` dizem a ordem de construção; os `flows`, a ordem de execução). De 1 a 3 fluxos: o caminho principal e o de falha que mais importa (ex.: "Cliente paga com PIX", "QR Code expira"). Cada `hops[]` é `{from, to, label}` e precisa seguir uma relação existente, no sentido dela ou no contrário para uma resposta. Use os elementos mais específicos (code) e escreva o `label` como o que acontece ("salva o txid antes de chamar o PSP"), não o nome da relação. O viewer desce sozinho até o nível de cada salto.
-- `detail` diz quanta liberdade você terá; o humano vê no viewer e pede mudança se discordar:
-  - `locked`: contratos públicos, fronteiras com sistemas externos, segurança, dados sensíveis, migrações de dados.
-  - `guided`: lógica de negócio central; sempre com `constraints`.
-  - `delegated`: UI, internals sem impacto em contrato, infraestrutura simples.
-- `constraints`: regras verificáveis ("idempotência por txid"), não descrições.
+- `constraints`: o que a implementação **precisa** respeitar, como regras verificáveis ("idempotência por txid", "migração aditiva, sem lock de tabela"), não descrições. Coloque onde há decisão que importa: contratos, fronteiras com sistemas externos, segurança, dados, migrações, regra de negócio central. O que não tem restrição fica a seu critério na execução.
 - Se um contrato existe no repo, referencie em `relations[].contract`.
 
 ## 2. Validar e entregar o link
@@ -44,7 +40,7 @@ python3 scripts/arch_url.py encode <plano>.arch.yaml
 ```
 
 - Erros: corrija o YAML e rode de novo. Não entregue link sem passar.
-- Avisos: corrija se fizer sentido (ex.: `new` sem `detail`).
+- Avisos: corrija se fizer sentido (ex.: algo novo que não abre até o código).
 - Entregue o link ao humano em uma linha, com um resumo curto do que o plano muda (ex.: "3 elementos novos, 2 alterados"). Diga que ele pode apertar **C** (ou **Comentar**), clicar nos cards e perguntar ou pedir mudança, e que a aprovação é aqui no chat.
 
 Viewer: `$C4PLAN_VIEWER_URL` se estiver definido (versão hospedada); senão o build local `viewer/dist/index.html` (arquivo único e autocontido; o link `file://` funciona num navegador comum). Se `viewer/dist/` não existir, avise o usuário que é preciso rodar `npm run build` em `viewer/` ou definir `C4PLAN_VIEWER_URL`.
@@ -86,7 +82,7 @@ Só ele aprova, e só no chat ("aprovado", "pode seguir", "ok, executa"). Silên
    ```bash
    python3 scripts/arch_url.py brief <plano>.arch.yaml -o <plano>.arch.md
    ```
-2. Resuma em poucas linhas o que mudou desde o primeiro link por causa da conversa (liberdade, restrições, estrutura).
+2. Resuma em poucas linhas o que mudou desde o primeiro link por causa da conversa (restrições, estrutura, fluxos).
 3. Adicione ao plano uma referência ao `<plano>.arch.md` e siga para a execução.
 
 Se o humano colar um link do viewer (por exemplo, aberto num navegador comum), ele só serve para ver: a versão que vale é o seu `<plano>.arch.yaml`.
@@ -94,8 +90,8 @@ Se o humano colar um link do viewer (por exemplo, aberto num navegador comum), e
 ## 4. Executar respeitando o brief
 
 O `<plano>.arch.md` é obrigatório durante a execução:
-- `locked`: não altere estrutura, contrato, tecnologia nem nomes de fronteira. Se a implementação exigir, **pare e pergunte**.
-- `guided`: siga todas as restrições; decisões fora delas, prefira o mais simples.
-- `delegated`: livre no design interno; restrições listadas continuam valendo.
+- Siga a estrutura (elementos, relações, fluxos) e todas as restrições. Se a implementação exigir mudar a estrutura ou quebrar uma restrição, **pare e pergunte**.
+- Contratos referenciados (`contract`) não mudam sem perguntar.
+- Fora das restrições, prefira o mais simples e siga o padrão do código existente.
 - O que o humano pediu no chat tem prioridade sobre sua proposta original.
 - Ao final, compare o que foi implementado com o YAML e reporte divergências (componente novo não previsto, dependência fora das relações, contrato alterado).
