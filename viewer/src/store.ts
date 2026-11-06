@@ -97,9 +97,9 @@ export const useStore = create<State>((set, get) => ({
     const cur = get().flow;
     const fl = cur && doc.flows?.find((x) => x.id === cur.id);
     const flow = fl ? { id: fl.id, hop: Math.min(cur!.hop, fl.hops.length - 1) } : null;
-    // mesmo plano (versão nova): mantém o que estava aberto; plano novo: abre o que muda
+    // mesmo plano (versão nova): mantém o que estava aberto; plano novo: começa tudo fechado (nível de contexto)
     const same = get().doc?.plan === doc.plan;
-    const expanded = same ? new Set([...get().expanded].filter((id) => model.index.has(id))) : defaultExpanded(model);
+    const expanded = same ? new Set([...get().expanded].filter((id) => model.index.has(id))) : new Set<string>();
     set({ doc, model, focus: f, selected: null, pinnedStep: null, loadError: null, commentTargets, flow, expanded, camera: null });
   },
   clear: (error = null) => set({ doc: null, model: null, focus: null, selected: null, loadError: error }),
