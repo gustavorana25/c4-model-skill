@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://c4plan.dev/schema/arch.v1.json",
+  "title": "C4 Plan — arquitetura de um plano (v1)",
+  "description": "Camada visual de um plano de implementação: quais elementos C4 o plano toca, o que muda, e quanta liberdade a IA tem em cada um.",
+  "type": "object",
+  "required": ["version", "plan", "elements"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "const": 1 },
+    "plan": { "type": "string", "minLength": 1, "description": "Título do plano." },
+    "description": { "type": "string" },
+    "approved": {
+      "type": "boolean",
+      "default": false,
+      "description": "Marcado pelo humano no viewer quando a estrutura foi validada."
+    },
+    "elements": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/element" }
+    },
+    "relations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/relation" }
+    },
+    "steps": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/step" }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$",
+      "description": "kebab-case, único em todo o documento."
+    },
+    "status": {
+      "enum": ["new", "changed", "removed", "unchanged"],
+      "default": "unchanged",
+      "description": "O que o plano faz com este elemento."
+    },
+    "detail": {
+      "enum": ["locked", "guided", "delegated"],
+      "description": "locked: humano definiu, IA não altera. guided: IA implementa seguindo as constraints. delegated: IA decide o design interno."
+    },
+    "element": {
+      "type": "object",
+      "required": ["id", "type", "name"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "type": {
+          "enum": ["person", "system", "external", "container", "database", "queue", "component"]
+        },
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "tech": { "type": "string" },
+        "status": { "$ref": "#/$defs/status" },
+        "detail": { "$ref": "#/$defs/detail" },
+        "constraints": { "type": "array", "items": { "type": "string" } },
+        "notes": { "type": "string", "description": "Comentário do humano feito na revisão." },
+        "reviewed": { "type": "boolean", "description": "Marcado pelo humano no viewer quando revisou o elemento." },
+        "children": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/element" }
+        }
+      }
+    },
+    "relation": {
+      "type": "object",
+      "required": ["from", "to"],
+      "additionalProperties": false,
+      "properties": {
+        "from": { "$ref": "#/$defs/id" },
+        "to": { "$ref": "#/$defs/id" },
+        "label": { "type": "string" },
+        "protocol": { "type": "string" },
+        "status": { "$ref": "#/$defs/status" },
+        "contract": { "type": "string", "description": "Caminho ou referência para o contrato (OpenAPI, AsyncAPI, schema)." }
+      }
+    },
+    "step": {
+      "type": "object",
+      "required": ["id", "title", "touches"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "title": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "touches": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/id" },
+          "description": "IDs dos elementos que este passo cria ou altera."
+        }
+      }
+    }
+  }
+}

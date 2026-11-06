@@ -1,0 +1,4 @@
+# LF em tudo: o script Python e os testes rodam também em WSL/Linux/macOS.
+* text=auto eol=lf
+*.jpg binary
+*.png binary

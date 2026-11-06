@@ -1,0 +1,15 @@
+# dependências e build
+node_modules/
+viewer/dist/
+
+# Python
+__pycache__/
+*.pyc
+
+# configuração local do Claude Code (servidores de preview desta máquina)
+.claude/
+
+# sistema / editor
+.DS_Store
+Thumbs.db
+*.local

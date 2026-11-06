@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+/* Tema escuro do C4 Plan (ver canvas "C4 Plan · Dark mode") */
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+
+  --color-canvas: #0b0f16;
+  --color-panel: #0e131c;
+  --color-raised: #111723;
+  --color-card: #141a25;
+  --color-card-component: #1a2638;
+  --color-chip: #1e2635;
+  --color-hover: #1a2232;
+  --color-line: #1e2533;
+  --color-line-strong: #263042;
+  --color-line-focus: #33405a;
+
+  --color-fg: #e6e9ef;
+  --color-fg-2: #c3cad7;
+  --color-muted: #a3acbb;
+  --color-subtle: #8c96a8;
+
+  --color-accent: #3d6bff;
+  --color-accent-hover: #2f5aea;
+  --color-accent-soft: #6e9bff;
+  --color-accent-ink: #a9c1ff;
+  --color-accent-bg: #17203a;
+
+  --color-st-new: #46c46a;
+  --color-st-new-ink: #6bdb8a;
+  --color-st-changed: #e3a23b;
+  --color-st-changed-ink: #f0b860;
+  --color-st-removed: #f2685f;
+  --color-st-removed-ink: #ff9a90;
+
+  --color-d-locked: #ffb4b4;
+  --color-d-guided: #8fd3ff;
+  --color-d-delegated: #c9b8ff;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-canvas text-fg antialiased;
+  color-scheme: dark;
+}
+
+::selection {
+  background: rgba(110, 155, 255, 0.35);
+}
+
+/* React Flow */
+.react-flow {
+  --xy-background-color: #0b0f16;
+}
+.react-flow__node-element {
+  cursor: pointer;
+}
+.react-flow__node-boundary {
+  cursor: grab;
+}
+.react-flow__edge {
+  cursor: pointer;
+}
+
+/* barras de rolagem discretas no escuro */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #263042 transparent;
+}

@@ -1,0 +1,129 @@
+# yaml-language-server: $schema=../schema/arch.v1.json
+version: 1
+plan: Adicionar pagamento via PIX no checkout
+description: >
+  Cliente escolhe PIX no checkout, recebe um QR Code e o pedido é confirmado
+  quando o PSP notifica o pagamento via webhook.
+
+elements:
+  - id: cliente
+    type: person
+    name: Cliente
+    description: Compra pelo app ou site
+
+  - id: loja
+    type: system
+    name: Loja Online
+    status: changed
+    children:
+      - id: web-app
+        type: container
+        name: Web App
+        tech: Next.js
+        status: changed
+        detail: delegated
+        description: Tela de checkout ganha opção PIX e exibição do QR Code
+
+      - id: checkout-api
+        type: container
+        name: Checkout API
+        tech: Node.js / Fastify
+        status: changed
+        detail: locked
+        description: Orquestra o pagamento do pedido
+        children:
+          - id: payment-router
+            type: component
+            name: Payment Router
+            status: changed
+            detail: guided
+            constraints:
+              - Escolhe o handler pelo método de pagamento; nada de if/else espalhado
+          - id: pix-handler
+            type: component
+            name: PIX Handler
+            status: new
+            detail: guided
+            constraints:
+              - Idempotência por txid
+              - QR Code expira em 30 minutos
+          - id: webhook-receiver
+            type: component
+            name: Webhook Receiver
+            status: new
+            detail: locked
+            constraints:
+              - Validar assinatura mTLS do PSP antes de qualquer processamento
+              - Responder 200 em < 2s; processamento assíncrono via fila
+          - id: card-handler
+            type: component
+            name: Card Handler
+            description: Pagamento com cartão (existente)
+
+      - id: orders-db
+        type: database
+        name: Orders DB
+        tech: PostgreSQL
+        status: changed
+        detail: guided
+        constraints:
+          - Migração aditiva (coluna pix_txid nullable), sem lock de tabela
+
+      - id: payment-events
+        type: queue
+        name: payment-events
+        tech: SQS
+        status: new
+        detail: delegated
+
+      - id: order-worker
+        type: container
+        name: Order Worker
+        tech: Node.js
+        status: changed
+        detail: delegated
+        description: Confirma o pedido ao consumir eventos de pagamento
+
+  - id: psp
+    type: external
+    name: PSP (Provedor PIX)
+    status: new
+    description: Gera cobranças PIX e notifica pagamentos
+
+  - id: gateway-cartao
+    type: external
+    name: Gateway de Cartão
+    description: Integração existente
+
+relations:
+  - { from: cliente, to: web-app, label: "faz checkout", protocol: HTTPS }
+  - { from: web-app, to: payment-router, label: "POST /payments", protocol: HTTPS/JSON, status: changed, contract: contracts/payments.openapi.yaml }
+  - { from: payment-router, to: pix-handler, label: "método = pix", status: new }
+  - { from: payment-router, to: card-handler, label: "método = cartão" }
+  - { from: card-handler, to: gateway-cartao, label: "autoriza", protocol: HTTPS }
+  - { from: pix-handler, to: psp, label: "cria cobrança", protocol: HTTPS/REST, status: new, contract: contracts/psp-cobranca.yaml }
+  - { from: pix-handler, to: orders-db, label: "grava txid", protocol: SQL, status: new }
+  - { from: psp, to: webhook-receiver, label: "notifica pagamento", protocol: HTTPS + mTLS, status: new }
+  - { from: webhook-receiver, to: payment-events, label: "publica PaymentConfirmed", status: new }
+  - { from: order-worker, to: payment-events, label: "consome", status: new }
+  - { from: order-worker, to: orders-db, label: "confirma pedido", protocol: SQL }
+
+steps:
+  - id: s1
+    title: Migração da tabela de pedidos (pix_txid)
+    touches: [orders-db]
+  - id: s2
+    title: Criar PIX Handler e integrar com o PSP
+    touches: [pix-handler, psp]
+  - id: s3
+    title: Rotear método PIX no Payment Router
+    touches: [payment-router]
+  - id: s4
+    title: Webhook Receiver + fila payment-events
+    touches: [webhook-receiver, payment-events]
+  - id: s5
+    title: Order Worker confirma pedido via evento
+    touches: [order-worker]
+  - id: s6
+    title: Tela de checkout com opção PIX e QR Code
+    touches: [web-app]

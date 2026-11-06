@@ -1,0 +1,11 @@
+{
+  "name": "c4-plan",
+  "private": true,
+  "description": "Atalhos: os comandos rodam no viewer/",
+  "scripts": {
+    "dev": "npm --prefix viewer run dev",
+    "build": "npm --prefix viewer run build",
+    "test": "npm --prefix viewer test",
+    "setup": "npm --prefix viewer ci"
+  }
+}
