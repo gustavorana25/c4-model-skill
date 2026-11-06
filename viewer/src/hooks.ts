@@ -47,10 +47,14 @@ export function useKeyboard() {
     const onKey = (ev: KeyboardEvent) => {
       if ((ev.target as HTMLElement).closest("input,textarea,[contenteditable]")) return;
       const s = useStore.getState();
-      if (!s.doc || s.sendOpen) return; // o <dialog> trata o próprio Esc
+      if (!s.doc) return;
       if (ev.key === "Escape") {
-        if (s.pinnedStep) s.pinStep(null);
+        if (s.commenting) s.setCommenting(false);
+        else if (s.pinnedStep) s.pinStep(null);
         else s.select(null);
+      } else if ((ev.key === "c" || ev.key === "C") && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
+        ev.preventDefault();
+        s.setCommenting(!s.commenting);
       } else if (ev.key === "Backspace" && s.focus) {
         s.setFocus(s.model!.parent.get(s.focus) ?? null);
       }
@@ -71,14 +75,6 @@ export async function copyText(text: string) {
     document.execCommand("copy");
     ta.remove();
   }
-}
-
-export async function copyLinkForAI() {
-  await flushHash();
-  await copyText(location.href);
-  const s = useStore.getState();
-  s.markClean();
-  s.notify(`Link copiado (${location.href.length.toLocaleString("pt-BR")} caracteres). Cole na conversa com a IA.`);
 }
 
 export async function copyYaml() {

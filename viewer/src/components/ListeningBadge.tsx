@@ -11,7 +11,7 @@ export function ListeningBadge() {
       role="status"
       title={
         listening
-          ? "Perguntas e pedidos feitos aqui chegam à IA agora, e a resposta aparece no próprio elemento."
+          ? "Comentários feitos aqui (tecla C) chegam à IA agora, e ela responde no chat. A escuta continua enquanto você mexer na página."
           : "A IA parou de escutar esta página. Volte ao chat e diga “pronto”, ou peça para ela escutar de novo."
       }
       className={cn(

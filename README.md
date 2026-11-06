@@ -1,9 +1,9 @@
 # C4 Plan
 
-Skill + viewer para o humano validar a arquitetura de um plano (estilo C4) antes da IA executar.
+Skill + viewer para o humano ver como um plano afeta a arquitetura (estilo C4), tirar dúvidas e pedir mudanças antes da IA executar. O viewer só mostra; a conversa e a aprovação ficam no chat.
 
 ```
-plano ─► arch.yaml ─► arch_url.py encode ─► link ─► humano revisa no viewer ─► link editado ─► arch_url.py brief ─► execução
+plano ─► arch.yaml ─► arch_url.py encode ─► link ─► humano olha e comenta ─► IA ajusta o YAML ─► ok no chat ─► arch_url.py brief ─► execução
 ```
 
 | Pasta | O que é |

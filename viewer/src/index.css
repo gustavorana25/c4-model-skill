@@ -67,6 +67,11 @@ body {
 .react-flow__edge {
   cursor: pointer;
 }
+/* modo comentário: o cursor vira um balão, como no Figma */
+.commenting .react-flow__pane,
+.commenting .react-flow__node-element {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2726%27 height=%2726%27 viewBox=%270 0 26 26%27%3E%3Cpath d=%27M2 24V13a11 11 0 1 1 11 11z%27 fill=%27%236E9BFF%27 stroke=%27white%27 stroke-width=%271.5%27/%3E%3C/svg%3E") 2 24, crosshair;
+}
 
 /* barras de rolagem discretas no escuro */
 * {

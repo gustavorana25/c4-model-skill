@@ -12,6 +12,8 @@ export type ElementNodeData = {
   hasChildren: boolean;
   dim?: boolean;
   selected?: boolean;
+  /** Faz parte do comentário que está sendo escrito. */
+  commentTarget?: boolean;
 };
 export type BoundaryNodeData = { el: ArchElement; isFocus: boolean };
 export type RelationEdgeData = {

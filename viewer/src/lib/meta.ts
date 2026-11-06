@@ -26,13 +26,13 @@ export const DETAIL_META: Record<Detail, { label: string; icon: LucideIcon; help
   locked: {
     label: "Locked",
     icon: Lock,
-    help: "Você definiu. A IA não altera estrutura, contratos nem tecnologia; se precisar, ela para e pergunta.",
+    help: "Fixo. A IA não altera estrutura, contratos nem tecnologia; se precisar, ela para e pergunta.",
     ink: "#FFB4B4",
   },
   guided: {
     label: "Guided",
     icon: Compass,
-    help: "A IA implementa seguindo as restrições abaixo.",
+    help: "A IA implementa seguindo as restrições abaixo; o resto ela decide pelo mais simples.",
     ink: "#8FD3FF",
   },
   delegated: {

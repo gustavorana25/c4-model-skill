@@ -1,7 +1,5 @@
-import { diffDocs } from "../../lib/diff";
 import { useStore, type SideTab } from "../../store";
 import { cn } from "../ui";
-import { ChangesPanel } from "./ChangesPanel";
 import { EdgeDetails } from "./EdgeDetails";
 import { ElementDetails } from "./ElementDetails";
 import { StepsPanel } from "./StepsPanel";
@@ -12,14 +10,11 @@ export function Sidebar() {
   const setTab = useStore((s) => s.setTab);
   const selected = useStore((s) => s.selected);
   const doc = useStore((s) => s.doc)!;
-  const baseline = useStore((s) => s.baseline)!;
   const steps = doc.steps?.length ?? 0;
-  const changes = diffDocs(baseline, doc).length;
 
-  const tabs: { id: SideTab; label: string; count?: number; badge?: boolean }[] = [
-    { id: "review", label: "Revisão" },
+  const tabs: { id: SideTab; label: string; count?: number }[] = [
+    { id: "review", label: "Visão geral" },
     { id: "steps", label: "Passos", count: steps },
-    { id: "changes", label: "Alterações", count: changes, badge: true },
   ];
 
   return (
@@ -38,20 +33,13 @@ export function Sidebar() {
             )}
           >
             {t.label}
-            {!!t.count &&
-              (t.badge ? (
-                <span className="rounded-full bg-accent px-1.5 text-[11px] leading-4 text-white">{t.count}</span>
-              ) : (
-                <span className="text-subtle">{t.count}</span>
-              ))}
+            {!!t.count && <span className="text-subtle">{t.count}</span>}
           </button>
         ))}
       </div>
       <div className="flex-1 overflow-y-auto">
         {tab === "steps" ? (
           <StepsPanel />
-        ) : tab === "changes" ? (
-          <ChangesPanel />
         ) : selected?.kind === "el" ? (
           <ElementDetails key={selected.id} id={selected.id} />
         ) : selected?.kind === "edge" ? (

@@ -10,6 +10,7 @@ import { computeView } from "../../lib/view";
 import { useStore } from "../../store";
 import { cn, floating } from "../ui";
 import { BoundaryNode } from "./BoundaryNode";
+import { CommentComposer } from "./CommentComposer";
 import { ElementNode } from "./ElementNode";
 import { RelationEdge } from "./RelationEdge";
 
@@ -34,6 +35,9 @@ export function Canvas() {
   const onlyChanges = useStore((s) => s.onlyChanges);
   const select = useStore((s) => s.select);
   const setFocus = useStore((s) => s.setFocus);
+  const commenting = useStore((s) => s.commenting);
+  const commentTargets = useStore((s) => s.commentTargets);
+  const toggleTarget = useStore((s) => s.toggleCommentTarget);
 
   const view = useMemo(() => computeView(doc, model, focus), [doc, model, focus]);
   const key = layoutKey(doc, focus);
@@ -58,9 +62,9 @@ export function Canvas() {
       (laid?.nodes ?? []).map((n): FlowNode => {
         const el = model.index.get(n.id) ?? n.data.el;
         if (n.type === "boundary") return { ...n, data: { ...n.data, el } };
-        return { ...n, data: { ...n.data, el, dim: dimmer.node(n.id), selected: selected?.kind === "el" && selected.id === n.id } };
+        return { ...n, data: { ...n.data, el, dim: dimmer.node(n.id), selected: selected?.kind === "el" && selected.id === n.id, commentTarget: commentTargets.includes(n.id) } };
       }),
-    [laid, model, dimmer, selected],
+    [laid, model, dimmer, selected, commentTargets],
   );
   const edges = useMemo(
     () =>
@@ -72,7 +76,7 @@ export function Canvas() {
   );
 
   return (
-    <div className="relative h-full w-full">
+    <div className={cn("relative h-full w-full", commenting && "commenting")}>
       {/* remonta a cada nível: o fitView inicial do React Flow enquadra depois de medir os nós */}
       <ReactFlow
         key={laid ? (laid.focus ?? "__root") : "__loading"}
@@ -90,10 +94,10 @@ export function Canvas() {
         minZoom={0.1}
         maxZoom={2.5}
         proOptions={{ hideAttribution: true }}
-        onNodeClick={(_, n) => n.type === "element" && select({ kind: "el", id: n.id })}
+        onNodeClick={(_, n) => n.type === "element" && (commenting ? toggleTarget(n.id) : select({ kind: "el", id: n.id }))}
         onNodeDoubleClick={(_, n) => n.type === "element" && n.data.hasChildren && setFocus(n.id)}
-        onEdgeClick={(_, e) => select({ kind: "edge", id: e.id })}
-        onPaneClick={() => select(null)}
+        onEdgeClick={(_, e) => !commenting && select({ kind: "edge", id: e.id })}
+        onPaneClick={() => !commenting && select(null)}
       >
         <Background variant={BackgroundVariant.Dots} gap={22} size={1.2} color="#1F2736" bgColor="#0B0F16" />
         <MiniMap
@@ -115,6 +119,7 @@ export function Canvas() {
         <Toolbar />
       </div>
       <Legend />
+      <CommentComposer />
       <StepBanner />
       {(layoutError || model.problems.length > 0) && (
         <div className="absolute inset-x-4 top-20 z-10 max-h-40 overflow-auto rounded-xl border border-[rgba(242,104,95,.35)] bg-[rgba(242,104,95,.1)] px-4 py-3 text-[13px] text-[#FFC9C4]">

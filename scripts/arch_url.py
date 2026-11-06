@@ -266,7 +266,7 @@ def brief(doc: dict, url: str | None = None) -> str:
     if doc.get("approved"):
         out.append("> ✅ Estrutura **aprovada** pelo humano.")
     else:
-        out.append("> ⚠️ Estrutura **NÃO aprovada**. Não execute: peça a revisão no viewer primeiro.")
+        out.append("> ⚠️ Estrutura **NÃO aprovada**. Não execute: peça a aprovação no chat primeiro.")
     if url:
         out += ["", f"Diagrama: {url}"]
     if doc.get("description"):

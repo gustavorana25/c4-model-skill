@@ -1,6 +1,6 @@
 import { ElementIcon } from "../ElementIcon";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { CheckCircle2, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { memo } from "react";
 import type { ElementFlowNode } from "../../lib/layout";
 import { STATUS_META, TYPE_META } from "../../lib/meta";
@@ -15,13 +15,15 @@ const hidden = "!pointer-events-none !opacity-0 !min-h-0 !min-w-0 !size-1 !borde
 const hasFooter = (el: ArchElement, st: Status, children: boolean) => st !== "unchanged" || !!el.detail || children;
 
 export const ElementNode = memo(function ElementNode({ data }: NodeProps<ElementFlowNode>) {
-  const { el, dim, selected, hasChildren } = data;
+  const { el, dim, selected, hasChildren, commentTarget } = data;
   const setFocus = useStore((s) => s.setFocus);
   const st = statusOf(el);
   const T = TYPE_META[el.type];
   const S = STATUS_META[st];
 
-  const ring = selected
+  const ring = commentTarget
+    ? "0 0 0 3px #6E9BFF, 0 0 0 9px rgba(110,155,255,.22), 0 10px 30px rgba(0,0,0,.45)"
+    : selected
     ? "0 0 0 3px #6E9BFF, 0 0 0 8px rgba(110,155,255,.16), 0 10px 30px rgba(0,0,0,.45)"
     : st !== "unchanged" && st !== "removed"
       ? `0 0 0 2px ${S.stroke}, 0 8px 24px rgba(0,0,0,.35)`
@@ -49,7 +51,6 @@ export const ElementNode = memo(function ElementNode({ data }: NodeProps<Element
           {T.label}
           {el.tech ? ` · ${el.tech}` : ""}
         </span>
-        {el.reviewed && <CheckCircle2 size={13} className="ml-auto shrink-0 text-st-new-ink" aria-label="Revisado" />}
       </div>
       <div className={cn("mt-1 shrink-0 text-[14.5px] font-semibold leading-[19px] text-fg", st === "removed" && "line-through")}>{el.name}</div>
       {el.description && <div className="mt-1 line-clamp-2 shrink-0 text-[12px] leading-4 text-muted">{el.description}</div>}

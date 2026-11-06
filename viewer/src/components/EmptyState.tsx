@@ -7,8 +7,8 @@ import { Button, cn } from "./ui";
 
 const STEPS = [
   ["A IA propõe", "Gera o diagrama a partir do plano, com o que é novo, alterado ou removido."],
-  ["Você decide", "Desce de nível só onde importa e define a liberdade da IA em cada parte."],
-  ["A IA entrega", "Executa seguindo o que você travou, guiou ou delegou."],
+  ["Você entende", "Vê como o plano afeta o que existe hoje, descendo de nível só onde importa."],
+  ["Você comenta", "Aponta os cards e pergunta ou pede mudança. A conversa e a aprovação ficam no chat."],
 ];
 
 export function EmptyState() {
@@ -32,11 +32,11 @@ export function EmptyState() {
       <div className="flex w-full max-w-[720px] flex-col gap-7">
         <div className="flex flex-col items-center gap-2.5 text-center">
           <h1 className="text-[32px] font-bold leading-tight tracking-tight text-fg">
-            Você valida a arquitetura.
-            <br />A IA executa depois.
+            Veja o que o plano muda
+            <br />antes de virar código.
           </h1>
           <p className="max-w-[520px] text-[15px] leading-relaxed text-muted">
-            Abra o link que a IA gerou para o seu plano, ou cole o YAML aqui para revisar a estrutura antes de qualquer código.
+            Abra o link que a IA gerou para o seu plano, ou cole o YAML aqui para ver a arquitetura dele.
           </p>
         </div>
 

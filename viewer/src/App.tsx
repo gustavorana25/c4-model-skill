@@ -2,7 +2,6 @@ import { ReactFlowProvider } from "@xyflow/react";
 import { useEffect } from "react";
 import { Canvas } from "./components/canvas/Canvas";
 import { EmptyState } from "./components/EmptyState";
-import { SendDialog } from "./components/SendDialog";
 import { Sidebar } from "./components/sidebar/Sidebar";
 import { Toast } from "./components/Toast";
 import { TopBar } from "./components/TopBar";
@@ -29,7 +28,6 @@ export default function App() {
             </div>
           </ReactFlowProvider>
           <Sidebar />
-          <SendDialog />
         </main>
       ) : (
         <EmptyState />
