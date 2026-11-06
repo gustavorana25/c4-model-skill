@@ -194,6 +194,33 @@ def validate(doc) -> tuple[list[str], list[str]]:
                 errors.append(f"{p}: touches '{ref}' não existe")
             touched.add(ref)
 
+    # fluxos: cada salto segue uma relação que existe (ida, ou volta para uma resposta)
+    rel_pairs = {(r.get("from"), r.get("to")) for r in doc.get("relations", []) or [] if isinstance(r, dict)}
+    flow_ids: set[str] = set()
+    for i, fl in enumerate(doc.get("flows", []) or []):
+        p = f"flows[{i}]"
+        if not isinstance(fl, dict):
+            errors.append(f"{p}: precisa ser um objeto")
+            continue
+        fid = fl.get("id")
+        p = f"{p}({fid})"
+        if fid in flow_ids:
+            errors.append(f"{p}: id de flow duplicado")
+        flow_ids.add(fid)
+        if not fl.get("title"):
+            errors.append(f"{p}: title obrigatório")
+        hops = fl.get("hops") or []
+        if not hops:
+            errors.append(f"{p}: hops vazio")
+        for j, h in enumerate(hops):
+            hp = f"{p}.hops[{j}]"
+            a, b = (h or {}).get("from"), (h or {}).get("to")
+            missing = [x for x in (a, b) if x not in elements]
+            if missing:
+                errors.extend(f"{hp}: '{x}' não existe" for x in missing)
+            elif (a, b) not in rel_pairs and (b, a) not in rel_pairs:
+                errors.append(f"{hp}: {a} → {b} não segue nenhuma relação; crie a relação ou use elementos que já se relacionam")
+
     # avisos que ajudam a IA a gerar um documento útil para revisão
     has_steps = bool(doc.get("steps"))
     for eid, el in elements.items():
@@ -334,6 +361,19 @@ def brief(doc: dict, url: str | None = None) -> str:
         rels = [r for r in doc.get("relations") or [] if r["from"] in ids or r["to"] in ids]
         if rels:
             out += ["", "Relações envolvidas:"] + [rel_line(r) for r in rels]
+        out.append("")
+
+    flows = doc.get("flows") or []
+    if flows:
+        out += ["## Fluxos (como funciona depois do plano)", ""]
+    for fl in flows:
+        out += [f"### {fl['title']}", ""]
+        if fl.get("description"):
+            out += [fl["description"].strip(), ""]
+        rel_label = {(r["from"], r["to"]): r.get("label") for r in doc.get("relations") or []}
+        for j, h in enumerate(fl["hops"], 1):
+            text = h.get("label") or rel_label.get((h["from"], h["to"])) or rel_label.get((h["to"], h["from"])) or ""
+            out.append(f"{j}. {name(h['from'])} → {name(h['to'])}" + (f": {text}" if text else ""))
         out.append("")
 
     touched = {t for s in steps for t in s["touches"]}

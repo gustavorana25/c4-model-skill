@@ -2,6 +2,7 @@ import { useStore, type SideTab } from "../../store";
 import { cn } from "../ui";
 import { EdgeDetails } from "./EdgeDetails";
 import { ElementDetails } from "./ElementDetails";
+import { FlowsPanel } from "./FlowsPanel";
 import { StepsPanel } from "./StepsPanel";
 import { Summary } from "./Summary";
 
@@ -14,6 +15,7 @@ export function Sidebar() {
 
   const tabs: { id: SideTab; label: string; count?: number }[] = [
     { id: "review", label: "Visão geral" },
+    { id: "flows", label: "Fluxos", count: doc.flows?.length ?? 0 },
     { id: "steps", label: "Passos", count: steps },
   ];
 
@@ -38,7 +40,9 @@ export function Sidebar() {
         ))}
       </div>
       <div className="flex-1 overflow-y-auto">
-        {tab === "steps" ? (
+        {tab === "flows" ? (
+          <FlowsPanel />
+        ) : tab === "steps" ? (
           <StepsPanel />
         ) : selected?.kind === "el" ? (
           <ElementDetails key={selected.id} id={selected.id} />

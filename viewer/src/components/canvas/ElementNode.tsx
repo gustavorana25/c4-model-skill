@@ -15,13 +15,15 @@ const hidden = "!pointer-events-none !opacity-0 !min-h-0 !min-w-0 !size-1 !borde
 const hasFooter = (el: ArchElement, st: Status, children: boolean) => st !== "unchanged" || !!el.detail || children;
 
 export const ElementNode = memo(function ElementNode({ data }: NodeProps<ElementFlowNode>) {
-  const { el, dim, selected, hasChildren, commentTarget } = data;
+  const { el, dim, selected, hasChildren, commentTarget, flowActive } = data;
   const setFocus = useStore((s) => s.setFocus);
   const st = statusOf(el);
   const T = TYPE_META[el.type];
   const S = STATUS_META[st];
 
-  const ring = commentTarget
+  const ring = flowActive
+    ? "0 0 0 3px #FFFFFF, 0 0 0 9px rgba(110,155,255,.45), 0 10px 30px rgba(0,0,0,.45)"
+    : commentTarget
     ? "0 0 0 3px #6E9BFF, 0 0 0 9px rgba(110,155,255,.22), 0 10px 30px rgba(0,0,0,.45)"
     : selected
     ? "0 0 0 3px #6E9BFF, 0 0 0 8px rgba(110,155,255,.16), 0 10px 30px rgba(0,0,0,.45)"

@@ -26,6 +26,11 @@
     "steps": {
       "type": "array",
       "items": { "$ref": "#/$defs/step" }
+    },
+    "flows": {
+      "type": "array",
+      "description": "Como o sistema funciona depois do plano: o caminho de uma ação de ponta a ponta. Os steps dizem a ordem de construção; os flows, a ordem de execução.",
+      "items": { "$ref": "#/$defs/flow" }
     }
   },
   "$defs": {
@@ -95,6 +100,32 @@
           "items": { "$ref": "#/$defs/id" },
           "description": "IDs dos elementos que este passo cria ou altera."
         }
+      }
+    },
+    "flow": {
+      "type": "object",
+      "required": ["id", "title", "hops"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "title": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "hops": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Saltos em ordem. Cada salto segue uma relação existente (no sentido dela, ou no contrário para uma resposta).",
+          "items": { "$ref": "#/$defs/hop" }
+        }
+      }
+    },
+    "hop": {
+      "type": "object",
+      "required": ["from", "to"],
+      "additionalProperties": false,
+      "properties": {
+        "from": { "$ref": "#/$defs/id" },
+        "to": { "$ref": "#/$defs/id" },
+        "label": { "type": "string", "description": "O que acontece neste salto. Padrão: o label da relação." }
       }
     }
   }

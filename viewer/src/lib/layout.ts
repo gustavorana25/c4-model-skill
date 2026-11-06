@@ -14,6 +14,8 @@ export type ElementNodeData = {
   selected?: boolean;
   /** Faz parte do comentário que está sendo escrito. */
   commentTarget?: boolean;
+  /** Ponta do salto atual do fluxo aberto. */
+  flowActive?: boolean;
 };
 export type BoundaryNodeData = { el: ArchElement; isFocus: boolean };
 export type RelationEdgeData = {
@@ -24,6 +26,9 @@ export type RelationEdgeData = {
   proto: string;
   dim?: boolean;
   selected?: boolean;
+  /** Números dos saltos do fluxo que passam por esta seta. */
+  flowNums?: number[];
+  flowActive?: boolean;
 };
 
 export type ElementFlowNode = Node<ElementNodeData, "element">;

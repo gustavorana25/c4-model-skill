@@ -36,6 +36,21 @@ export interface Step {
   touches: string[];
 }
 
+/** Um salto de um fluxo: segue uma relação (no sentido dela, ou no contrário para uma resposta). */
+export interface Hop {
+  from: string;
+  to: string;
+  label?: string;
+}
+
+/** Como o sistema funciona depois do plano: o caminho de uma ação de ponta a ponta. */
+export interface Flow {
+  id: string;
+  title: string;
+  description?: string;
+  hops: Hop[];
+}
+
 export interface ArchDoc {
   version: 1;
   plan: string;
@@ -44,4 +59,5 @@ export interface ArchDoc {
   elements: ArchElement[];
   relations?: Relation[];
   steps?: Step[];
+  flows?: Flow[];
 }

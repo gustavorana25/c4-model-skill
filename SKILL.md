@@ -29,6 +29,7 @@ Regras:
 - Nível 4 (`code`): os arquivos, classes, módulos ou funções que o plano cria ou altera, com `path` preenchido. Arquivo que já existe e muda é `status: changed`. Liste o que muda, não o código todo do componente (2 a 4 por componente costuma bastar).
 - Relações ligam os elementos **mais específicos** (code → code quando existe). O viewer agrega para os níveis acima.
 - `steps`: um por passo do plano, mesma ordem e título. `touches` = elementos que o passo cria ou altera.
+- `flows`: como o sistema **funciona** depois do plano (os `steps` dizem a ordem de construção; os `flows`, a ordem de execução). De 1 a 3 fluxos: o caminho principal e o de falha que mais importa (ex.: "Cliente paga com PIX", "QR Code expira"). Cada `hops[]` é `{from, to, label}` e precisa seguir uma relação existente, no sentido dela ou no contrário para uma resposta. Use os elementos mais específicos (code) e escreva o `label` como o que acontece ("salva o txid antes de chamar o PSP"), não o nome da relação. O viewer desce sozinho até o nível de cada salto.
 - `detail` diz quanta liberdade você terá; o humano vê no viewer e pede mudança se discordar:
   - `locked`: contratos públicos, fronteiras com sistemas externos, segurança, dados sensíveis, migrações de dados.
   - `guided`: lógica de negócio central; sempre com `constraints`.

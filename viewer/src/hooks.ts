@@ -45,11 +45,17 @@ export function useHashSync() {
 export function useKeyboard() {
   useEffect(() => {
     const onKey = (ev: KeyboardEvent) => {
-      if ((ev.target as HTMLElement).closest("input,textarea,[contenteditable]")) return;
+      if ((ev.target as Element | null)?.closest?.("input,textarea,[contenteditable]")) return;
       const s = useStore.getState();
       if (!s.doc) return;
+      if (s.flow && (ev.key === "ArrowRight" || ev.key === "ArrowLeft")) {
+        ev.preventDefault();
+        s.setHop(s.flow.hop + (ev.key === "ArrowRight" ? 1 : -1));
+        return;
+      }
       if (ev.key === "Escape") {
         if (s.commenting) s.setCommenting(false);
+        else if (s.flow) s.openFlow(null);
         else if (s.pinnedStep) s.pinStep(null);
         else s.select(null);
       } else if ((ev.key === "c" || ev.key === "C") && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {

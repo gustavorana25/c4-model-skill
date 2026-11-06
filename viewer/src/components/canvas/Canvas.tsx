@@ -1,7 +1,8 @@
 import { Background, BackgroundVariant, MiniMap, ReactFlow, useReactFlow, type EdgeTypes, type NodeTypes } from "@xyflow/react";
-import { ChevronRight, Filter, Home, Maximize2, Minus, Plus, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Filter, Home, Maximize2, Minus, Plus, Route, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { computeDimmer } from "../../lib/highlight";
+import { hopLabel } from "../../lib/flow";
+import { computeDimmer, flowMarks } from "../../lib/highlight";
 import { layoutView, type FlowNode, type RelationFlowEdge } from "../../lib/layout";
 import { DETAIL_META, STATUS_META, levelLabel } from "../../lib/meta";
 import { ancestors, statusOf, type Model } from "../../lib/model";
@@ -38,6 +39,7 @@ export function Canvas() {
   const commenting = useStore((s) => s.commenting);
   const commentTargets = useStore((s) => s.commentTargets);
   const toggleTarget = useStore((s) => s.toggleCommentTarget);
+  const flow = useStore((s) => s.flow);
 
   const view = useMemo(() => computeView(doc, model, focus), [doc, model, focus]);
   const key = layoutKey(doc, focus);
@@ -55,24 +57,38 @@ export function Canvas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
-  const dimmer = useMemo(() => computeDimmer(doc, model, view, pinnedStep, onlyChanges), [doc, model, view, pinnedStep, onlyChanges]);
+  const marks = useMemo(() => (flow ? flowMarks(doc, view, flow.id, flow.hop) : null), [doc, view, flow]);
+  const dimmer = useMemo(
+    () => computeDimmer(doc, model, view, pinnedStep, onlyChanges, marks),
+    [doc, model, view, pinnedStep, onlyChanges, marks],
+  );
 
   const nodes = useMemo(
     () =>
       (laid?.nodes ?? []).map((n): FlowNode => {
         const el = model.index.get(n.id) ?? n.data.el;
         if (n.type === "boundary") return { ...n, data: { ...n.data, el } };
-        return { ...n, data: { ...n.data, el, dim: dimmer.node(n.id), selected: selected?.kind === "el" && selected.id === n.id, commentTarget: commentTargets.includes(n.id) } };
+        return { ...n, data: { ...n.data, el, dim: dimmer.node(n.id), selected: selected?.kind === "el" && selected.id === n.id, commentTarget: commentTargets.includes(n.id), flowActive: !!marks?.activeNodes.has(n.id) } };
       }),
-    [laid, model, dimmer, selected, commentTargets],
+    [laid, model, dimmer, selected, commentTargets, marks],
   );
   const edges = useMemo(
     () =>
       (laid?.edges ?? []).map((e): RelationFlowEdge => {
         const ve = view.edges.find((v) => v.id === e.id) ?? e.data!.edge;
-        return { ...e, data: { ...e.data!, edge: ve, dim: dimmer.edge(ve), selected: selected?.kind === "edge" && selected.id === e.id } };
+        return {
+          ...e,
+          data: {
+            ...e.data!,
+            edge: ve,
+            dim: dimmer.edge(ve),
+            selected: selected?.kind === "edge" && selected.id === e.id,
+            flowNums: marks?.edgeNums.get(e.id),
+            flowActive: !!marks?.activeEdges.has(e.id),
+          },
+        };
       }),
-    [laid, view, dimmer, selected],
+    [laid, view, dimmer, selected, marks],
   );
 
   return (
@@ -121,6 +137,7 @@ export function Canvas() {
       <Legend />
       <CommentComposer />
       <StepBanner />
+      <FlowBanner insideNode={marks?.insideNode ?? null} />
       {(layoutError || model.problems.length > 0) && (
         <div className="absolute inset-x-4 top-20 z-10 max-h-40 overflow-auto rounded-xl border border-[rgba(242,104,95,.35)] bg-[rgba(242,104,95,.1)] px-4 py-3 text-[13px] text-[#FFC9C4]">
           <b>Problemas no documento</b>
@@ -238,6 +255,56 @@ function Legend() {
           <d.icon size={12} /> {d.label}
         </span>
       ))}
+    </div>
+  );
+}
+
+function FlowBanner({ insideNode }: { insideNode: string | null }) {
+  const doc = useStore((s) => s.doc)!;
+  const model = useStore((s) => s.model)!;
+  const flow = useStore((s) => s.flow);
+  const setHop = useStore((s) => s.setHop);
+  const openFlow = useStore((s) => s.openFlow);
+  const setFocus = useStore((s) => s.setFocus);
+  const fl = flow && doc.flows?.find((f) => f.id === flow.id);
+  if (!fl || !flow) return null;
+  const h = fl.hops[flow.hop];
+  const name = (id: string) => model.index.get(id)?.name ?? id;
+  const btn = "flex size-7 cursor-pointer items-center justify-center rounded-full bg-white/15 hover:bg-white/25 disabled:cursor-default disabled:opacity-40";
+  return (
+    <div className="absolute left-1/2 top-[72px] z-10 flex w-[min(640px,calc(100%-32px))] -translate-x-1/2 flex-col gap-1 rounded-2xl bg-accent px-3 py-2 text-[13px] text-white shadow-[0_8px_24px_rgba(0,0,0,.45)]">
+      <div className="flex items-center gap-2">
+        <Route size={14} className="shrink-0" />
+        <b className="min-w-0 truncate">{fl.title}</b>
+        <span className="shrink-0 tabular-nums text-white/75">
+          {flow.hop + 1}/{fl.hops.length}
+        </span>
+        <span className="ml-auto flex shrink-0 items-center gap-1">
+          <button type="button" className={btn} disabled={flow.hop === 0} onClick={() => setHop(flow.hop - 1)} aria-label="Salto anterior (←)">
+            <ChevronLeft size={15} />
+          </button>
+          <button type="button" className={btn} disabled={flow.hop === fl.hops.length - 1} onClick={() => setHop(flow.hop + 1)} aria-label="Próximo salto (→)">
+            <ChevronRight size={15} />
+          </button>
+          <button type="button" className={btn} onClick={() => openFlow(null)} aria-label="Fechar fluxo (Esc)">
+            <X size={14} />
+          </button>
+        </span>
+      </div>
+      <div className="flex min-w-0 items-baseline gap-1.5 pl-[22px]">
+        <span className="shrink-0 font-semibold">
+          {name(h.from)} → {name(h.to)}
+        </span>
+        <span className="min-w-0 truncate text-white/85">{hopLabel(doc, h)}</span>
+      </div>
+      {insideNode && (
+        <div className="pl-[22px] text-[12px] text-white/80">
+          Acontece dentro de <b>{name(insideNode)}</b>.{" "}
+          <button type="button" className="cursor-pointer underline" onClick={() => setFocus(insideNode)}>
+            Abrir
+          </button>
+        </div>
+      )}
     </div>
   );
 }

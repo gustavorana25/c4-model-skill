@@ -83,7 +83,8 @@ export function Summary() {
         <ol className="flex flex-col gap-3">
           {[
             ["Veja o que muda", "Verde é novo, laranja é alterado, tracejado é removido. Use “Abrir” para descer de nível."],
-            ["Siga os passos", "Na aba Passos, cada passo acende os elementos que ele toca."],
+            ["Siga um fluxo", "Na aba Fluxos, avance salto a salto (← →) e veja como o sistema funciona depois do plano."],
+            ["Veja a ordem de construção", "Na aba Passos, cada passo acende os elementos que ele toca."],
             ["Pergunte ou peça mudança", "Aperte C, clique nos cards e escreva. A conversa acontece no chat."],
           ].map(([t, d], i) => (
             <li key={t} className="flex gap-3">

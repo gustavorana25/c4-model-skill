@@ -350,3 +350,44 @@ steps:
   - id: s6
     title: Tela de checkout com opção PIX e QR Code
     touches: [web-app]
+
+flows:
+  - id: pagar-com-pix
+    title: Cliente paga com PIX
+    description: Do clique em "Pagar" até o QR Code na tela.
+    hops:
+      - { from: cliente, to: checkout-page-view, label: "finaliza a compra" }
+      - { from: checkout-page-view, to: method-selector, label: "escolhe PIX" }
+      - { from: checkout-page-view, to: payments-api-client, label: "envia o pagamento" }
+      - { from: payments-api-client, to: payments-controller, label: "POST /payments com method = pix" }
+      - { from: payments-controller, to: method-registry, label: "resolve o handler do PIX" }
+      - { from: method-registry, to: create-pix-charge, label: "cria a cobrança" }
+      - { from: create-pix-charge, to: pix-charge-repo, label: "salva o txid antes de chamar o PSP" }
+      - { from: pix-charge-repo, to: order-model, label: "grava pix_txid no pedido" }
+      - { from: create-pix-charge, to: psp-client, label: "pede a cobrança" }
+      - { from: psp-client, to: psp, label: "cria cobrança com expiração de 30 min" }
+      - { from: psp, to: psp-client, label: "devolve QR Code e copia-e-cola" }
+      - { from: payments-controller, to: payments-api-client, label: "responde com o QR Code" }
+      - { from: checkout-page-view, to: pix-qr-view, label: "mostra o QR Code e a contagem" }
+
+  - id: psp-confirma
+    title: PSP confirma o pagamento
+    description: O cliente pagou no app do banco; o pedido é confirmado e a tela atualiza.
+    hops:
+      - { from: psp, to: psp-webhook-controller, label: "notifica pagamento (mTLS)" }
+      - { from: psp-webhook-controller, to: signature-verifier, label: "valida certificado e assinatura" }
+      - { from: psp-webhook-controller, to: payment-event-publisher, label: "publica e responde 200 em < 2s" }
+      - { from: payment-event-publisher, to: payment-confirmed-schema, label: "PaymentConfirmed na fila" }
+      - { from: payment-confirmed-schema, to: payment-confirmed-handler, label: "worker recebe o evento" }
+      - { from: payment-confirmed-handler, to: confirm-order, label: "confirma (idempotente por txid)" }
+      - { from: confirm-order, to: order-model, label: "pedido fica pago" }
+      - { from: pix-qr-view, to: use-payment-status, label: "tela acompanha o pagamento" }
+      - { from: use-payment-status, to: payments-controller, label: "GET status: pago" }
+      - { from: use-payment-status, to: pix-qr-view, label: "mostra pagamento confirmado" }
+
+  - id: qr-expira
+    title: QR Code expira sem pagamento
+    hops:
+      - { from: pix-qr-view, to: use-payment-status, label: "contagem chega a zero" }
+      - { from: use-payment-status, to: payments-controller, label: "GET status: expirado" }
+      - { from: use-payment-status, to: pix-qr-view, label: "para o polling e oferece novo QR Code" }

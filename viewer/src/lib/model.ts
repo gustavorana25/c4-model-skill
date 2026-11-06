@@ -38,6 +38,10 @@ export function buildModel(doc: ArchDoc): Model {
       if (!index.has(end)) problems.push(`relação ${r.from} → ${r.to}: "${end}" não existe`);
   for (const s of doc.steps ?? [])
     for (const t of s.touches ?? []) if (!index.has(t)) problems.push(`passo ${s.id}: "${t}" não existe`);
+  for (const f of doc.flows ?? [])
+    (f.hops ?? []).forEach((h, i) => {
+      for (const end of [h.from, h.to]) if (!index.has(end)) problems.push(`fluxo ${f.id}, salto ${i + 1}: "${end}" não existe`);
+    });
   return { index, parent, problems };
 }
 

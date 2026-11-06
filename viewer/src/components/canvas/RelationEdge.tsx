@@ -9,9 +9,11 @@ import { cn } from "../ui";
 export const RelationEdge = memo(function RelationEdge({ id, data, markerEnd }: EdgeProps<RelationFlowEdge>) {
   const select = useStore((s) => s.select);
   if (!data) return null;
-  const { points, label, text, proto, edge, dim, selected } = data;
+  const { points, label, text, proto, edge, dim, selected, flowNums, flowActive } = data;
   const path = points.map((p, i) => `${i ? "L" : "M"}${p.x},${p.y}`).join(" ");
-  const color = selected ? "#6E9BFF" : STATUS_META[edge.status].stroke;
+  const color = flowActive ? "#FFFFFF" : selected ? "#6E9BFF" : STATUS_META[edge.status].stroke;
+  // número do salto perto do começo da seta (ou no rótulo, se houver)
+  const at = label ? { x: label.x - 11, y: label.y - 11 } : points.length ? { x: points[0].x - 11, y: points[0].y + 4 } : null;
 
   return (
     <>
@@ -22,12 +24,25 @@ export const RelationEdge = memo(function RelationEdge({ id, data, markerEnd }: 
         interactionWidth={18}
         style={{
           stroke: color,
-          strokeWidth: selected ? 2.6 : edge.status === "unchanged" ? 1.5 : 2,
+          strokeWidth: flowActive ? 3.2 : selected ? 2.6 : edge.status === "unchanged" ? 1.5 : 2,
           strokeDasharray: edge.status === "removed" ? "6 4" : undefined,
           opacity: dim ? 0.16 : 1,
           transition: "opacity .2s",
         }}
       />
+      {!!flowNums?.length && at && (
+        <EdgeLabelRenderer>
+          <span
+            className={cn(
+              "nodrag nopan pointer-events-none absolute z-10 flex h-[22px] min-w-[22px] items-center justify-center rounded-full px-1.5 text-[11px] font-bold tabular-nums shadow-[0_2px_8px_rgba(0,0,0,.5)]",
+              flowActive ? "bg-white text-accent" : "bg-accent text-white",
+            )}
+            style={{ transform: `translate(${at.x}px, ${at.y}px)` }}
+          >
+            {flowNums.join(" · ")}
+          </span>
+        </EdgeLabelRenderer>
+      )}
       {label && text && (
         <EdgeLabelRenderer>
           <button

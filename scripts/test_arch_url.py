@@ -56,6 +56,11 @@ check("component na raiz", any("não pode ficar" in e for e in broken(
     lambda d: d["elements"].append({"id": "solto", "type": "component", "name": "x"}))))
 check("relação pai-filho", any("pai e filho" in e for e in broken(
     lambda d: d["relations"].append({"from": "checkout-api", "to": "pix-handler"}))))
+check("salto de fluxo sem relação", any("não segue nenhuma relação" in e for e in broken(
+    lambda d: d["flows"][0]["hops"].append({"from": "cliente", "to": "psp"}))))
+check("salto de fluxo com id inexistente", any("não existe" in e for e in broken(
+    lambda d: d["flows"][0]["hops"].append({"from": "cliente", "to": "nada"}))))
+check("brief lista os fluxos", "## Fluxos" in A.brief(doc) and "devolve QR Code" in A.brief(doc))
 check("step tocando id inexistente", any("não existe" in e for e in broken(
     lambda d: d["steps"].append({"id": "s9", "title": "x", "touches": ["nada"]}))))
 check("detail inválido", len(broken(
