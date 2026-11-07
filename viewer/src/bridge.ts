@@ -12,6 +12,7 @@
  * inatividade. Depois de IDLE_MS parado, next() devolve {event:"stop"} e a escuta acaba.
  */
 import { copyText, flushHash } from "./hooks";
+import { titleOf } from "./lib/model";
 import { useStore } from "./store";
 
 export interface Target {
@@ -155,7 +156,8 @@ export async function state() {
   return {
     loaded: true as const,
     url: location.href,
-    plan: s.doc.plan,
+    plan: titleOf(s.doc),
+    kind: s.doc.kind ?? "plan",
     focus: s.focus,
     selected: sel ? { kind: sel.kind, id: sel.id, name: el?.name ?? null } : null,
     /** Há quanto tempo o humano não mexe na página. Abaixo de IDLE_MS, vale voltar a escutar. */

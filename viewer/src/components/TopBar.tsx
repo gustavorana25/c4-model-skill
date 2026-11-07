@@ -1,5 +1,6 @@
 import { Code2, MessageCircle } from "lucide-react";
 import { copyYaml } from "../hooks";
+import { titleOf } from "../lib/model";
 import { useStore } from "../store";
 import { ListeningBadge } from "./ListeningBadge";
 import { Button, Logo } from "./ui";
@@ -15,7 +16,7 @@ export function TopBar() {
       {doc && (
         <>
           <span className="h-6 w-px bg-[#232B3A]" />
-          <h1 className="min-w-0 truncate text-[15px] font-semibold text-fg">{doc.plan}</h1>
+          <h1 className="min-w-0 truncate text-[15px] font-semibold text-fg">{titleOf(doc)}</h1>
           <div className="ml-auto flex flex-wrap items-center gap-3.5">
             <ListeningBadge />
             <Button variant="outline" onClick={copyYaml} title="Copiar o documento em YAML">

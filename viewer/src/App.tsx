@@ -6,6 +6,7 @@ import { Sidebar } from "./components/sidebar/Sidebar";
 import { Toast } from "./components/Toast";
 import { TopBar } from "./components/TopBar";
 import { useHashSync, useKeyboard } from "./hooks";
+import { titleOf } from "./lib/model";
 import { useStore } from "./store";
 
 export default function App() {
@@ -14,8 +15,8 @@ export default function App() {
   const doc = useStore((s) => s.doc);
 
   useEffect(() => {
-    document.title = doc ? `${doc.plan} · C4 Plan` : "C4 Plan";
-  }, [doc?.plan]);
+    document.title = doc ? `${titleOf(doc)} · C4 Plan` : "C4 Plan";
+  }, [doc]);
 
   return (
     <div className="flex h-full flex-col">

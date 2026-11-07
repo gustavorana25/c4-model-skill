@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """C4 Plan — converte arch.yaml <-> URL do viewer.
 
+Dois tipos de documento (campo kind):
+  plan    (padrão) o que um plano cria, altera e remove, com steps e aprovação
+  system  o sistema como é hoje: documentação, onboarding (tudo inalterado, sem steps)
+
 Uso:
   arch_url.py validate <arquivo.yaml|json>
   arch_url.py encode   <arquivo.yaml|json> [--base URL | --local]
@@ -32,6 +36,7 @@ VIEWER_PATH = ROOT / "viewer" / "dist" / "index.html"  # build autocontido (npm 
 # versão publicada pelo workflow do GitHub Pages (.github/workflows/pages.yml)
 PUBLIC_VIEWER_URL = "https://gustavorana25.github.io/c4-model-skill/"
 
+KINDS = {"plan", "system"}
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 TYPES = {"person", "system", "external", "container", "database", "queue", "component", "code"}
 STATUSES = {"new", "changed", "removed", "unchanged"}
@@ -99,8 +104,19 @@ def validate(doc) -> tuple[list[str], list[str]]:
     # 2. checagens estruturais mínimas (sempre) + semânticas
     if doc.get("version") != VERSION:
         errors.append(f"version: esperado {VERSION}")
-    if not isinstance(doc.get("plan"), str) or not doc["plan"].strip():
-        errors.append("plan: obrigatório")
+    kind = doc.get("kind", "plan")
+    if kind not in KINDS:
+        errors.append(f"kind: inválido '{kind}' (use plan ou system)")
+    if not title_of(doc).strip():
+        errors.append("title: obrigatório (ou plan, em kind: plan)")
+    is_system = kind == "system"
+    if is_system:
+        if doc.get("steps"):
+            warnings.append("steps: só fazem sentido em kind: plan; remova (a ordem de execução vai em flows)")
+        if "approved" in doc:
+            warnings.append("approved: só faz sentido em kind: plan; remova")
+        if "plan" in doc and "title" not in doc:
+            warnings.append("plan: em kind: system use title")
 
     elements: dict[str, dict] = {}
     parent_of: dict[str, str | None] = {}
@@ -128,6 +144,8 @@ def validate(doc) -> tuple[list[str], list[str]]:
                 errors.append(f"{p}: name obrigatório")
             if el.get("status", "unchanged") not in STATUSES:
                 errors.append(f"{p}: status inválido '{el.get('status')}'")
+            if is_system and el.get("status", "unchanged") != "unchanged":
+                warnings.append(f"{p}: status '{el['status']}' em kind: system; a documentação mostra o sistema como é hoje")
             if "detail" in el:
                 warnings.append(f"{p}: 'detail' não é mais usado; remova (as constraints dizem o que a IA deve seguir)")
 
@@ -170,6 +188,8 @@ def validate(doc) -> tuple[list[str], list[str]]:
                 errors.append(f"{p}: relação entre pai e filho não faz sentido em C4")
         if r.get("status", "unchanged") not in STATUSES:
             errors.append(f"{p}: status inválido '{r.get('status')}'")
+        elif is_system and r.get("status", "unchanged") != "unchanged":
+            warnings.append(f"{p}: status '{r['status']}' em kind: system")
         key = (f, t, r.get("label"))
         if key in seen_rel:
             warnings.append(f"{p}: relação duplicada")
@@ -223,7 +243,9 @@ def validate(doc) -> tuple[list[str], list[str]]:
                 errors.append(f"{hp}: {a} → {b} não segue nenhuma relação; crie a relação ou use elementos que já se relacionam")
 
     # avisos que ajudam a IA a gerar um documento útil para revisão
-    has_steps = bool(doc.get("steps"))
+    has_steps = bool(doc.get("steps")) and not is_system
+    if is_system and not doc.get("flows"):
+        warnings.append("flows: documente pelo menos o caminho principal; é por ele que quem chega entende o sistema")
     for eid, el in elements.items():
         st = el.get("status", "unchanged")
         if st in ("new", "changed"):
@@ -247,6 +269,11 @@ def _descendants(el: dict):
     for c in el.get("children", []) or []:
         yield c["id"]
         yield from _descendants(c)
+
+
+def title_of(doc: dict) -> str:
+    t = doc.get("title") or doc.get("plan")
+    return t if isinstance(t, str) else ""
 
 
 # ---------------------------------------------------------------------- codec
@@ -283,7 +310,10 @@ STATUS_PT = {"new": "novo", "changed": "alterado", "removed": "removido", "uncha
 
 
 def brief(doc: dict, url: str | None = None) -> str:
-    """Markdown de execução: o que a IA deve seguir em cada passo do plano."""
+    """Markdown de execução: o que a IA deve seguir em cada passo do plano.
+    Em kind: system, a documentação do sistema em texto (elementos, relações, fluxos)."""
+    if doc.get("kind") == "system":
+        return system_doc(doc, url)
     index: dict[str, dict] = {}
 
     def walk(items):
@@ -294,7 +324,7 @@ def brief(doc: dict, url: str | None = None) -> str:
     walk(doc.get("elements"))
     name = lambda i: index[i]["name"] if i in index else i  # noqa: E731
 
-    out = [f"# Arquitetura do plano: {doc['plan']}", ""]
+    out = [f"# Arquitetura do plano: {title_of(doc)}", ""]
     if doc.get("approved"):
         out.append("> ✅ Estrutura **aprovada** pelo humano.")
     else:
@@ -354,18 +384,7 @@ def brief(doc: dict, url: str | None = None) -> str:
             out += ["", "Relações envolvidas:"] + [rel_line(r) for r in rels]
         out.append("")
 
-    flows = doc.get("flows") or []
-    if flows:
-        out += ["## Fluxos (como funciona depois do plano)", ""]
-    for fl in flows:
-        out += [f"### {fl['title']}", ""]
-        if fl.get("description"):
-            out += [fl["description"].strip(), ""]
-        rel_label = {(r["from"], r["to"]): r.get("label") for r in doc.get("relations") or []}
-        for j, h in enumerate(fl["hops"], 1):
-            text = h.get("label") or rel_label.get((h["from"], h["to"])) or rel_label.get((h["to"], h["from"])) or ""
-            out.append(f"{j}. {name(h['from'])} → {name(h['to'])}" + (f": {text}" if text else ""))
-        out.append("")
+    out += flow_lines(doc, name, "## Fluxos (como funciona depois do plano)")
 
     touched = {t for s in steps for t in s["touches"]}
     loose = [el for el in index.values()
@@ -377,6 +396,57 @@ def brief(doc: dict, url: str | None = None) -> str:
         for el in loose:
             out += element_block(el)
         out.append("")
+    return "\n".join(out).rstrip() + "\n"
+
+
+def flow_lines(doc: dict, name, heading: str) -> list[str]:
+    flows = doc.get("flows") or []
+    out = [heading, ""] if flows else []
+    rel_label = {(r["from"], r["to"]): r.get("label") for r in doc.get("relations") or []}
+    for fl in flows:
+        out += [f"### {fl['title']}", ""]
+        if fl.get("description"):
+            out += [fl["description"].strip(), ""]
+        for j, h in enumerate(fl["hops"], 1):
+            text = h.get("label") or rel_label.get((h["from"], h["to"])) or rel_label.get((h["to"], h["from"])) or ""
+            out.append(f"{j}. {name(h['from'])} → {name(h['to'])}" + (f": {text}" if text else ""))
+        out.append("")
+    return out
+
+
+def system_doc(doc: dict, url: str | None = None) -> str:
+    """Documentação do sistema como é hoje: árvore de elementos, relações e fluxos."""
+    index: dict[str, dict] = {}
+    out = [f"# Arquitetura: {title_of(doc)}", ""]
+    if url:
+        out += [f"Diagrama: {url}", ""]
+    if doc.get("description"):
+        out += [doc["description"].strip(), ""]
+    out += ["## Elementos", ""]
+
+    def walk(items, depth: int):
+        for el in items or []:
+            index[el["id"]] = el
+            bits = [TYPE_PT.get(el["type"], el["type"])] + ([el["tech"]] if el.get("tech") else [])
+            line = f"{'  ' * depth}- **{el['name']}** ({' · '.join(bits)})"
+            if el.get("description"):
+                line += f": {el['description'].strip()}"
+            out.append(line)
+            if el.get("path"):
+                out.append(f"{'  ' * (depth + 1)}- Arquivo: `{el['path']}`")
+            for c in el.get("constraints") or []:
+                out.append(f"{'  ' * (depth + 1)}- Regra: {c}")
+            walk(el.get("children"), depth + 1)
+
+    walk(doc.get("elements"), 0)
+    name = lambda i: index[i]["name"] if i in index else i  # noqa: E731
+    rels = doc.get("relations") or []
+    if rels:
+        out += ["", "## Relações", ""]
+        for r in rels:
+            bits = [f"{name(r['from'])} → {name(r['to'])}"] + [r[k] for k in ("label", "protocol") if r.get(k)]
+            out.append("- " + " · ".join(bits) + (f" — contrato: `{r['contract']}`" if r.get("contract") else ""))
+    out += [""] + flow_lines(doc, name, "## Fluxos")
     return "\n".join(out).rstrip() + "\n"
 
 
@@ -427,7 +497,7 @@ def main() -> None:
     d.add_argument("-o", "--output")
     d.add_argument("--json", action="store_true", help="saída em JSON em vez de YAML")
 
-    b = sub.add_parser("brief", help="gera o markdown de execução para a IA")
+    b = sub.add_parser("brief", help="gera o markdown de execução (plan) ou a documentação em texto (system)")
     b.add_argument("source", help="arquivo .yaml/.json ou URL/hash do viewer")
     b.add_argument("-o", "--output")
 

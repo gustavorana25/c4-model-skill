@@ -49,9 +49,15 @@ export interface Flow {
   hops: Hop[];
 }
 
+/** plan: o que um plano muda (padrão). system: o sistema como é hoje (documentação). */
+export type DocKind = "plan" | "system";
+
 export interface ArchDoc {
   version: 1;
-  plan: string;
+  kind?: DocKind;
+  /** Título; em kind: plan, plan também serve. */
+  title?: string;
+  plan?: string;
   description?: string;
   approved?: boolean;
   elements: ArchElement[];

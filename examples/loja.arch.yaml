@@ -1,0 +1,207 @@
+# yaml-language-server: $schema=../schema/arch.v1.json
+# Documentação do sistema como é hoje (kind: system): a mesma loja do pix.arch.yaml,
+# antes do PIX. Tudo inalterado, sem steps; os fluxos explicam como ele funciona.
+version: 1
+kind: system
+title: Loja Online
+description: >
+  Loja que vende pelo site. O cliente paga com cartão no checkout; o Checkout API
+  autoriza no gateway e o Order Worker confirma o pedido em segundo plano.
+
+elements:
+  - id: cliente
+    type: person
+    name: Cliente
+    description: Compra pelo app ou site
+
+  - id: loja
+    type: system
+    name: Loja Online
+    children:
+      # ------------------------------------------------------------ Web App
+      - id: web-app
+        type: container
+        name: Web App
+        tech: Next.js
+        description: Site da loja, do catálogo ao checkout
+        children:
+          - id: checkout-page
+            type: component
+            name: Checkout Page
+            description: Página de pagamento do pedido
+            children:
+              - id: checkout-page-view
+                type: code
+                name: CheckoutPage
+                path: apps/web/app/checkout/page.tsx
+                description: Resumo do pedido e formulário de pagamento
+              - id: card-form
+                type: code
+                name: CardForm
+                path: apps/web/components/card-form.tsx
+                description: Coleta o cartão e tokeniza direto no gateway
+                constraints:
+                  - O número do cartão nunca passa pelos nossos servidores; só o token
+              - id: payments-api-client
+                type: code
+                name: paymentsApi
+                path: apps/web/lib/payments-api.ts
+                description: Cliente do POST /payments
+                constraints:
+                  - Tipos gerados de contracts/payments.openapi.yaml; nada escrito à mão
+
+      # ------------------------------------------------------------ Checkout API
+      - id: checkout-api
+        type: container
+        name: Checkout API
+        tech: Node.js / Fastify
+        description: Orquestra o pagamento do pedido
+        children:
+          - id: payment-router
+            type: component
+            name: Payment Router
+            description: Escolhe o handler pelo método de pagamento
+            children:
+              - id: payments-controller
+                type: code
+                name: PaymentsController
+                path: src/payments/payments.controller.ts
+                description: POST /payments delega ao registro de métodos
+              - id: method-registry
+                type: code
+                name: PaymentMethodRegistry
+                path: src/payments/method-registry.ts
+                description: Mapa método → handler (hoje só cartão)
+                constraints:
+                  - Método novo entra como mais uma entrada do mapa, sem mudar a interface PaymentHandler
+          - id: card-handler
+            type: component
+            name: Card Handler
+            description: Pagamento com cartão
+            children:
+              - id: authorize-card
+                type: code
+                name: AuthorizeCard
+                path: src/payments/card/authorize-card.ts
+                description: Autoriza o valor no gateway e agenda a confirmação do pedido
+                constraints:
+                  - Idempotência por orderId; retentativa não cobra duas vezes
+              - id: gateway-client
+                type: code
+                name: GatewayClient
+                path: src/payments/card/gateway-client.ts
+                description: Cliente HTTP do gateway de cartão
+
+      # ------------------------------------------------------------ Orders DB
+      - id: orders-db
+        type: database
+        name: Orders DB
+        tech: PostgreSQL
+        children:
+          - id: orders-table
+            type: component
+            name: Tabela orders
+            description: Pedidos e status de pagamento
+            children:
+              - id: order-model
+                type: code
+                name: Order
+                path: src/orders/order.model.ts
+                description: Modelo do pedido; status vai de pending para paid
+
+      # ------------------------------------------------------------ fila de jobs
+      - id: order-jobs
+        type: queue
+        name: order-jobs
+        tech: BullMQ (Redis)
+        description: Jobs de pós-pagamento
+        children:
+          - id: confirm-order-job
+            type: component
+            name: ConfirmOrder job
+            description: Pedido autorizado esperando confirmação
+            children:
+              - id: confirm-order-job-schema
+                type: code
+                name: ConfirmOrderJob
+                path: packages/jobs/confirm-order.ts
+                description: Tipo do job, compartilhado pela API e pelo worker
+
+      # ------------------------------------------------------------ Order Worker
+      - id: order-worker
+        type: container
+        name: Order Worker
+        tech: Node.js
+        description: Confirma pedidos em segundo plano
+        children:
+          - id: order-confirmation
+            type: component
+            name: Order Confirmation
+            description: Confirma o pedido e avisa o cliente
+            children:
+              - id: confirm-order
+                type: code
+                name: confirmOrder
+                path: apps/worker/src/orders/confirm-order.ts
+                description: Marca o pedido como pago a partir da transação de cartão
+                constraints:
+                  - Idempotente por id da transação
+              - id: send-receipt
+                type: code
+                name: sendReceipt
+                path: apps/worker/src/orders/send-receipt.ts
+                description: Envia o comprovante por e-mail
+
+  - id: gateway-cartao
+    type: external
+    name: Gateway de Cartão
+    description: Tokeniza e autoriza pagamentos com cartão
+
+  - id: email
+    type: external
+    name: Serviço de e-mail
+    description: Envio de e-mails transacionais
+
+relations:
+  - { from: cliente, to: checkout-page-view, label: "faz checkout", protocol: HTTPS }
+  - { from: checkout-page-view, to: card-form, label: "pede o cartão" }
+  - { from: card-form, to: gateway-cartao, label: "tokeniza o cartão", protocol: HTTPS }
+  - { from: checkout-page-view, to: payments-api-client, label: "paga o pedido" }
+  - { from: payments-api-client, to: payments-controller, label: "POST /payments", protocol: HTTPS/JSON, contract: contracts/payments.openapi.yaml }
+  - { from: payments-controller, to: method-registry, label: "resolve handler" }
+  - { from: method-registry, to: authorize-card, label: "método = cartão" }
+  - { from: authorize-card, to: gateway-client, label: "autoriza" }
+  - { from: gateway-client, to: gateway-cartao, label: "autoriza o valor", protocol: HTTPS/REST }
+  - { from: authorize-card, to: order-model, label: "grava a transação", protocol: SQL }
+  - { from: authorize-card, to: confirm-order-job-schema, label: "agenda a confirmação", protocol: Redis }
+  - { from: confirm-order, to: confirm-order-job-schema, label: "consome", protocol: Redis }
+  - { from: confirm-order, to: order-model, label: "marca como pago", protocol: SQL }
+  - { from: confirm-order, to: send-receipt, label: "pede o comprovante" }
+  - { from: send-receipt, to: email, label: "envia", protocol: HTTPS }
+
+flows:
+  - id: pagar-com-cartao
+    title: Cliente paga com cartão
+    description: Do formulário de cartão até a resposta "pagamento autorizado".
+    hops:
+      - { from: cliente, to: checkout-page-view, label: "finaliza a compra" }
+      - { from: checkout-page-view, to: card-form, label: "preenche o cartão" }
+      - { from: card-form, to: gateway-cartao, label: "tokeniza direto no gateway" }
+      - { from: checkout-page-view, to: payments-api-client, label: "envia o token" }
+      - { from: payments-api-client, to: payments-controller, label: "POST /payments com method = card" }
+      - { from: payments-controller, to: method-registry, label: "resolve o handler do cartão" }
+      - { from: method-registry, to: authorize-card, label: "autoriza o pagamento" }
+      - { from: authorize-card, to: gateway-client, label: "pede a autorização" }
+      - { from: gateway-client, to: gateway-cartao, label: "autoriza o valor do pedido" }
+      - { from: authorize-card, to: order-model, label: "grava a transação no pedido" }
+      - { from: authorize-card, to: confirm-order-job-schema, label: "agenda a confirmação" }
+      - { from: payments-controller, to: payments-api-client, label: "responde: autorizado" }
+
+  - id: confirmar-pedido
+    title: Pedido é confirmado
+    description: Em segundo plano, depois da autorização.
+    hops:
+      - { from: confirm-order-job-schema, to: confirm-order, label: "worker pega o job" }
+      - { from: confirm-order, to: order-model, label: "pedido fica pago" }
+      - { from: confirm-order, to: send-receipt, label: "pede o comprovante" }
+      - { from: send-receipt, to: email, label: "envia o e-mail ao cliente" }

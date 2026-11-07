@@ -1,11 +1,13 @@
 ---
 name: c4-plan
-description: Camada visual de arquitetura (estilo C4) para um plano de implementação. Use depois que um plano existir (plan mode ou skill de plano) e antes de executar, para o humano ver num diagrama navegável como o plano afeta o que existe hoje, tirar dúvidas e pedir mudanças antes de aprovar no chat. Ative quando o usuário pedir "mostra a arquitetura do plano", "quero validar a estrutura", "gera o C4", "diagrama do plano", ou colar um link do viewer C4 Plan (contém "#v1.").
+description: Camada visual de arquitetura (estilo C4) em diagrama navegável, com fluxos salto a salto. Dois usos. (1) Plano de implementação: depois que um plano existir e antes de executar, para o humano ver como o plano afeta o que existe hoje, tirar dúvidas e pedir mudanças antes de aprovar no chat. (2) Documentar o sistema como é hoje, a partir do código, para onboarding ou para entender um repositório. Ative quando o usuário pedir "mostra a arquitetura do plano", "quero validar a estrutura", "gera o C4", "diagrama do plano", "documenta a arquitetura", "explica como o sistema funciona", "mapa do sistema", "onboarding do repo", ou colar um link do viewer C4 Plan (contém "#v1.").
 ---
 
 # C4 Plan
 
 O humano entende **estrutura e fronteiras** do plano; a IA executa **depois** do ok no chat. Esta skill não substitui o plano: ela gera a camada visual dele e um brief para a execução.
+
+Ela também **documenta o sistema como é hoje** (`kind: system`): o mesmo diagrama e os mesmos fluxos, sem status, passos nem aprovação. Veja a seção 5.
 
 **O chat é a fonte da verdade.** O viewer só mostra o plano: o humano não edita nada lá. Dúvidas e pedidos de mudança chegam como comentários (ou colados no chat), você responde no chat, e toda mudança passa pelo YAML.
 
@@ -95,3 +97,32 @@ O `<plano>.arch.md` é obrigatório durante a execução:
 - Fora das restrições, prefira o mais simples e siga o padrão do código existente.
 - O que o humano pediu no chat tem prioridade sobre sua proposta original.
 - Ao final, compare o que foi implementado com o YAML e reporte divergências (componente novo não previsto, dependência fora das relações, contrato alterado).
+
+## 5. Documentar o sistema como é hoje (`kind: system`)
+
+Quando o pedido é entender ou documentar o que já existe ("documenta a arquitetura", "como esse sistema funciona", onboarding), não há plano: você lê o repositório e gera o mesmo YAML com `kind: system`. Exemplo completo: `examples/loja.arch.yaml`.
+
+```yaml
+version: 1
+kind: system
+title: Loja Online
+description: Uma ou duas frases sobre o que o sistema faz.
+```
+
+Como montar:
+- **Leia antes de escrever.** Pontos de entrada (rotas, handlers, consumers, jobs), manifests (`package.json`, `docker-compose`, infra), migrações e clientes de serviços externos dizem quais são os containers, bancos, filas e externos. Não invente peças que o código não mostra; se algo for incerto, diga no chat.
+- **Sem `status`, `steps` e `approved`.** Tudo é o sistema como está (o `validate` avisa se sobrar algum).
+- **Fluxos são o principal.** De 2 a 4: o caminho que mais importa para o negócio, a principal tarefa em segundo plano e o caso de falha mais comum. É por eles que quem chega entende o sistema.
+- **Profundidade:** desça até `code` só no que os fluxos atravessam, com `path` real (confira que o arquivo existe). O resto fica em `container` ou `component`, fechado.
+- `constraints` viram as **regras da casa** que quem mexe precisa saber (idempotência, quem pode escrever em qual tabela, contrato que não muda).
+- Relações e fluxos seguem as mesmas regras do plano (seção 1).
+
+Entrega: `encode` gera o link como no plano. Diga em uma linha o que o sistema tem ("5 containers, 2 externos, 2 fluxos") e que dá para seguir os fluxos na aba Fluxos e perguntar com **C**. Se tiver navegador, escute a página (seção 2b): os comentários são perguntas, que você responde no chat, ou correções da documentação, que você aplica no YAML e recarrega com `load()`.
+
+Para um texto versionável no repositório, `brief` gera a documentação em Markdown (elementos, relações e fluxos):
+
+```bash
+python3 scripts/arch_url.py brief docs/arquitetura.arch.yaml -o docs/arquitetura.md
+```
+
+Mais tarde, um plano sobre esse sistema pode partir desse YAML: copie, troque `kind` para `plan` e marque o que muda com `status`.

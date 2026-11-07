@@ -11,7 +11,7 @@ export function parseDoc(raw: unknown): ArchDoc {
   if (!raw || typeof raw !== "object") throw new Error("O documento precisa ser um objeto.");
   const d = raw as Partial<ArchDoc>;
   if (!Array.isArray(d.elements)) throw new Error('Documento inválido: falta a lista "elements".');
-  if (typeof d.plan !== "string") throw new Error('Documento inválido: falta "plan".');
+  if (typeof d.title !== "string" && typeof d.plan !== "string") throw new Error('Documento inválido: falta "title".');
   return d as ArchDoc;
 }
 
@@ -44,6 +44,13 @@ export function buildModel(doc: ArchDoc): Model {
     });
   return { index, parent, problems };
 }
+
+export const titleOf = (doc: ArchDoc): string => doc.title ?? doc.plan ?? "";
+/** Documentação do sistema como é hoje, em vez de um plano. */
+export const isSystemDoc = (doc: ArchDoc) => doc.kind === "system";
+/** Algum elemento ou relação muda: só aí fazem sentido legenda, "Só mudanças" e "Abrir tudo que muda". */
+export const docHasChanges = (doc: ArchDoc, m: Model) =>
+  [...m.index.values()].some((e) => statusOf(e) !== "unchanged") || (doc.relations ?? []).some((r) => statusOf(r) !== "unchanged");
 
 export const statusOf = (x: { status?: Status }): Status => x.status ?? "unchanged";
 export const implementable = (el: ArchElement) => !["person", "external", "system"].includes(el.type);

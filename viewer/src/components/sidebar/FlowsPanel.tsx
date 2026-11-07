@@ -1,6 +1,6 @@
 import { Route } from "lucide-react";
 import { hopLabel, hopRelation } from "../../lib/flow";
-import { statusOf } from "../../lib/model";
+import { isSystemDoc, statusOf } from "../../lib/model";
 import { STATUS_META } from "../../lib/meta";
 import { useStore } from "../../store";
 import { cn } from "../ui";
@@ -17,12 +17,12 @@ export function FlowsPanel() {
   const flows = doc.flows ?? [];
   const name = (id: string) => model.index.get(id)?.name ?? id;
 
-  if (!flows.length) return <p className="p-5 text-[13px] text-subtle">Nenhum fluxo neste plano.</p>;
+  if (!flows.length) return <p className="p-5 text-[13px] text-subtle">Nenhum fluxo neste diagrama.</p>;
 
   return (
     <div className="flex flex-col gap-1 px-3 py-4">
       <p className="mx-2 mb-1 text-[13px] text-muted">
-        Como o sistema funciona depois do plano. Abra um fluxo e avance com ← →.
+        {isSystemDoc(doc) ? "Como o sistema funciona hoje." : "Como o sistema funciona depois do plano."} Abra um fluxo e avance com ← →.
       </p>
       <label className="mx-2 mb-2.5 flex cursor-pointer items-center gap-2 text-[12.5px] text-fg-2">
         <input type="checkbox" checked={follow} onChange={toggleFollow} className="accent-[#4F7DF3]" />

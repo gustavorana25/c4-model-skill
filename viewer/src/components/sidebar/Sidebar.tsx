@@ -13,11 +13,12 @@ export function Sidebar() {
   const doc = useStore((s) => s.doc)!;
   const steps = doc.steps?.length ?? 0;
 
-  const tabs: { id: SideTab; label: string; count?: number }[] = [
+  const all: { id: SideTab; label: string; count?: number }[] = [
     { id: "review", label: "Visão geral" },
     { id: "flows", label: "Fluxos", count: doc.flows?.length ?? 0 },
     { id: "steps", label: "Passos", count: steps },
   ];
+  const tabs = all.filter((t) => t.id !== "steps" || steps > 0); // documentação do sistema não tem passos
 
   return (
     <aside className="flex w-[400px] shrink-0 flex-col border-l border-line bg-panel">

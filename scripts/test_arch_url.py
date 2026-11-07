@@ -82,5 +82,20 @@ d = copy.deepcopy(doc)
 d["elements"][1]["children"][1]["children"][1].pop("children")  # pix-handler sem code
 check("aviso: componente novo que não abre", any("pix-handler" in w and "sem children" in w for w in A.validate(d)[1]))
 
+# kind: system (documentação do sistema como é hoje)
+loja = yaml.safe_load((ROOT / "examples" / "loja.arch.yaml").read_text(encoding="utf-8"))
+errs, warns = A.validate(loja)
+check("exemplo da loja (system) válido e sem avisos", errs == [] and warns == [])
+md = A.brief(loja)
+check("system: brief vira documentação", md.startswith("# Arquitetura: Loja Online") and "## Elementos" in md
+      and "## Fluxos" in md and "aprovada" not in md and "## Regras" not in md)
+check("system: avisa status e steps", (lambda w: any("kind: system" in x and "status" in x for x in w)
+      and any(x.startswith("steps:") for x in w))(A.validate({**loja, "steps": [{"id": "s1", "title": "x", "touches": ["loja"]}],
+      "elements": loja["elements"] + [{"id": "novo", "type": "person", "name": "N", "status": "new"}]})[1]))
+check("system: sem título é erro", any("title" in e for e in A.validate({k: v for k, v in loja.items() if k != "title"})[0]))
+check("kind inválido é erro", any("kind" in e for e in A.validate({**loja, "kind": "outro"})[0]))
+check("plan continua aceitando title no lugar de plan",
+      A.validate({**{k: v for k, v in doc.items() if k != "plan"}, "title": "X"})[0] == [])
+
 print(f"\n{'TUDO OK' if not fails else f'{fails} falha(s)'}")
 sys.exit(1 if fails else 0)

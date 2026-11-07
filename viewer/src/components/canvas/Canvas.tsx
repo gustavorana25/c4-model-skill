@@ -5,7 +5,7 @@ import { hopLabel } from "../../lib/flow";
 import { computeDimmer, flowMarks } from "../../lib/highlight";
 import { layoutView, type FlowNode, type RelationFlowEdge } from "../../lib/layout";
 import { STATUS_META, levelLabel } from "../../lib/meta";
-import { ancestors, statusOf, type Model } from "../../lib/model";
+import { ancestors, docHasChanges, statusOf, type Model } from "../../lib/model";
 import type { ArchDoc } from "../../lib/types";
 import { computeView } from "../../lib/view";
 import { useStore } from "../../store";
@@ -49,6 +49,8 @@ function layoutKey(doc: ArchDoc, focus: string | null, expanded: ReadonlySet<str
 export function Canvas() {
   const doc = useStore((s) => s.doc)!;
   const model = useStore((s) => s.model)!;
+  // documentação do sistema (ou plano sem mudanças): sem legenda nem filtros de mudança
+  const changes = useMemo(() => docHasChanges(doc, model), [doc, model]);
   const focus = useStore((s) => s.focus);
   const selected = useStore((s) => s.selected);
   const pinnedStep = useStore((s) => s.pinnedStep);
@@ -206,9 +208,9 @@ export function Canvas() {
       </ReactFlow>
       <div className="pointer-events-none absolute inset-x-4 top-4 z-10 flex flex-wrap items-start justify-between gap-2 [&>*]:pointer-events-auto">
         <Breadcrumbs model={model} focus={focus} />
-        <Toolbar />
+        <Toolbar changes={changes} />
       </div>
-      <Legend />
+      {changes && <Legend />}
       <CommentComposer />
       <StepBanner />
       <FlowBanner insideNode={marks?.insideNode ?? null} />
@@ -270,7 +272,7 @@ function Breadcrumbs({ model, focus }: { model: Model; focus: string | null }) {
   );
 }
 
-function Toolbar() {
+function Toolbar({ changes }: { changes: boolean }) {
   const rf = useReactFlow();
   const onlyChanges = useStore((s) => s.onlyChanges);
   const toggle = useStore((s) => s.toggleOnlyChanges);
@@ -279,6 +281,8 @@ function Toolbar() {
   const btn = "flex size-9 cursor-pointer items-center justify-center rounded-lg text-fg-2 transition hover:bg-hover hover:text-fg";
   return (
     <div className={cn(floating, "ml-auto flex items-center gap-1 p-1")}>
+      {changes && (
+        <>
       <button
         type="button"
         onClick={toggle}
@@ -294,6 +298,8 @@ function Toolbar() {
       <button type="button" className={btn} onClick={expandChanged} title="Abrir tudo que o plano muda" aria-label="Abrir tudo que o plano muda">
         <UnfoldVertical size={16} />
       </button>
+        </>
+      )}
       <button type="button" className={btn} onClick={collapseAll} title="Fechar todas as caixas" aria-label="Fechar todas as caixas">
         <Shrink size={15} />
       </button>

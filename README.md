@@ -2,6 +2,8 @@
 
 Skill + viewer para o humano ver como um plano afeta a arquitetura (estilo C4), tirar dúvidas e pedir mudanças antes da IA executar. O viewer só mostra; a conversa e a aprovação ficam no chat.
 
+O mesmo formato também documenta o sistema como é hoje (`kind: system`): diagrama e fluxos, sem status nem passos. Serve para onboarding e para entender um repositório.
+
 ```
 plano ─► arch.yaml ─► arch_url.py encode ─► link ─► humano olha e comenta ─► IA ajusta o YAML ─► ok no chat ─► arch_url.py brief ─► execução
 ```
@@ -11,7 +13,7 @@ plano ─► arch.yaml ─► arch_url.py encode ─► link ─► humano olha 
 | `SKILL.md` | Instruções da skill para a IA |
 | `schema/arch.v1.json` | JSON Schema do `arch.yaml` |
 | `scripts/arch_url.py` | `validate`, `encode`, `decode`, `brief` (stdlib + PyYAML) |
-| `examples/` | Exemplo completo (PIX) |
+| `examples/` | `pix.arch.yaml`: plano (adicionar PIX). `loja.arch.yaml`: documentação da mesma loja antes do PIX |
 | `viewer/` | Front-end (Vite + React + TS + Tailwind + React Flow + ELK) |
 
 ## Como rodar (nesta máquina, Windows)
@@ -81,7 +83,7 @@ O `arch_url.py encode` gera links para essa versão por padrão. Para outro host
 python3 scripts/arch_url.py validate examples/pix.arch.yaml
 python3 scripts/arch_url.py encode   examples/pix.arch.yaml
 python3 scripts/arch_url.py decode   "<link>" -o plano.arch.yaml
-python3 scripts/arch_url.py brief    "<link>" -o plano.arch.md
+python3 scripts/arch_url.py brief    "<link>" -o plano.arch.md   # em kind: system, a documentação em Markdown
 python3 scripts/test_arch_url.py
 ```
 
