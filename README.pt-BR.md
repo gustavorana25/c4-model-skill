@@ -29,7 +29,7 @@ A mesma skill também documenta um sistema que já existe, para onboarding ou pa
 Para experimentar numa conversa só, cole isto no seu agente depois que ele escrever um plano:
 
 ```text
-Baixe a skill Blueroll para uma pasta temporária, mantendo a estrutura (SKILL.md, scripts/arch_url.py, schema/arch.v1.json, schema/notations.json), a partir de https://raw.githubusercontent.com/gustavorana25/c4-model-skill/main/skills/blueroll/. Leia o SKILL.md inteiro e siga as instruções para mostrar a arquitetura do plano.
+Baixe a skill Blueroll para uma pasta temporária, mantendo a estrutura (SKILL.md, scripts/arch_url.py, scripts/messages.py, schema/arch.v1.json, schema/notations.json, schema/notations.i18n.json), a partir de https://raw.githubusercontent.com/gustavorana25/c4-model-skill/main/skills/blueroll/. Leia o SKILL.md inteiro e siga as instruções para mostrar a arquitetura do plano.
 ```
 
 Peça para **baixar** os arquivos, não só para ler a URL: quem gera o link é o `arch_url.py`, e as ferramentas de leitura da web podem entregar ao agente um resumo em vez das instruções completas. O agente vai pedir permissão para baixar e rodar o script. Vale só para aquela conversa; para usar sempre, instale.

@@ -1,4 +1,4 @@
-# Publica o viewer no GitHub Pages a cada push no main.
+# Testa o viewer e o script Python em todo PR e push; publica no GitHub Pages só no push no main.
 # O build gera um único viewer/dist/index.html autocontido; os planos ficam no #hash
 # do link e nunca chegam ao servidor.
 name: Viewer no GitHub Pages
@@ -6,6 +6,7 @@ name: Viewer no GitHub Pages
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -13,9 +14,9 @@ permissions:
   pages: write
   id-token: write
 
-# um deploy por vez; um push novo cancela o que estiver esperando
+# um run por ref; um push novo cancela o que estiver esperando (PRs não cancelam o deploy do main)
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -35,14 +36,26 @@ jobs:
 
       - run: npm ci
       - run: npm test
+
+      # depois do npm test: o teste Python lê o fixture que o viewer gera (pix.ts.hash.txt)
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml jsonschema
+      - run: python3 tests/test_arch_url.py
+        working-directory: .
+
       - run: npm run build
 
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@v5
+      - if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
         with:
           path: viewer/dist
 
   deploy:
+    if: github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-latest
     environment:

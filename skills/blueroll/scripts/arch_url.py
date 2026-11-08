@@ -161,7 +161,10 @@ def validate(doc) -> tuple[list[str], list[str]]:
         errors.append(m("notation", note=note, opts=", ".join(presets()["notations"])))
     notation = load_notation(doc)
     types = notation["types"]
-    for t in doc.get("types") or []:
+    for i, t in enumerate(doc.get("types") or []):
+        if not isinstance(t, dict):
+            errors.append(m("must_object", p=f"types[{i}]"))
+            continue
         tid = t.get("id")
         for par in t.get("parents") or []:
             if par not in (None, "*") and par not in types:
@@ -296,7 +299,10 @@ def validate(doc) -> tuple[list[str], list[str]]:
             errors.append(m("flow_empty", p=p))
         for j, h in enumerate(hops):
             hp = f"{p}.hops[{j}]"
-            a, b = (h or {}).get("from"), (h or {}).get("to")
+            if not isinstance(h, dict):
+                errors.append(m("must_object", p=hp))
+                continue
+            a, b = h.get("from"), h.get("to")
             missing = [x for x in (a, b) if x not in elements]
             if missing:
                 errors.extend(m("hop_missing", p=hp, ref=x) for x in missing)

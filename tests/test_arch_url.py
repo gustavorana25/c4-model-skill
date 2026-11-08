@@ -170,6 +170,22 @@ check("toda notação tem tradução en e es", all(
 M = __import__("messages").MESSAGES
 check("mensagens com as mesmas chaves nos 3 idiomas", set(M["en"]) == set(M["pt-BR"]) == set(M["es"]))
 
+# sem jsonschema, itens que não são objeto viram erro (e não AttributeError)
+_js = sys.modules.get("jsonschema")
+sys.modules["jsonschema"] = None  # import jsonschema -> ImportError
+try:
+    _bad_hop = {"version": 1, "title": "x", "elements": [], "flows": [{"id": "f", "title": "t", "hops": ["a"]}]}
+    _bad_type = {"version": 1, "title": "x", "types": ["oops"], "elements": []}
+    check("sem jsonschema: salto que não é objeto vira erro",
+          any("hops[0]" in e for e in A.validate(_bad_hop)[0]))
+    check("sem jsonschema: tipo que não é objeto vira erro",
+          any("types[0]" in e for e in A.validate(_bad_type)[0]))
+finally:
+    if _js is None:
+        del sys.modules["jsonschema"]
+    else:
+        sys.modules["jsonschema"] = _js
+
 _b = os.environ.pop("BLUEROLL_VIEWER_URL", None)
 os.environ["BLUEROLL_VIEWER_URL"] = "https://b.host/"
 check("BLUEROLL_VIEWER_URL tem prioridade", A.default_base() == "https://b.host/")
