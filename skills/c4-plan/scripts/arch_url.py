@@ -30,9 +30,10 @@ from pathlib import Path
 
 VERSION = 1
 PREFIX = f"v{VERSION}."
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent  # pasta da skill
 SCHEMA_PATH = ROOT / "schema" / "arch.v1.json"
-VIEWER_PATH = ROOT / "viewer" / "dist" / "index.html"  # build autocontido (npm run build)
+# build local do viewer; só existe num clone do repositório (skills/c4-plan/ -> raiz)
+VIEWER_PATH = ROOT.parent.parent / "viewer" / "dist" / "index.html"
 # versão publicada pelo workflow do GitHub Pages (.github/workflows/pages.yml)
 PUBLIC_VIEWER_URL = "https://gustavorana25.github.io/c4-model-skill/"
 
@@ -463,7 +464,7 @@ def default_base() -> str:
 def local_base() -> str:
     """Build local (viewer/dist/index.html), para testar mudanças no viewer antes de publicar."""
     if not VIEWER_PATH.exists():
-        sys.exit(f"build local não encontrado: {VIEWER_PATH} (rode npm run build em viewer/)")
+        sys.exit(f"build local não encontrado: {VIEWER_PATH} (--local só funciona num clone do repositório, depois de npm run build em viewer/)")
     p = str(VIEWER_PATH)
     m = re.match(r"^/mnt/([a-z])/(.*)$", p)  # WSL -> caminho Windows
     if m:

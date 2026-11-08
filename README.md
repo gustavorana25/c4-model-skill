@@ -10,11 +10,17 @@ plano ─► arch.yaml ─► arch_url.py encode ─► link ─► humano olha 
 
 | Pasta | O que é |
 |---|---|
-| `SKILL.md` | Instruções da skill para a IA |
-| `schema/arch.v1.json` | JSON Schema do `arch.yaml` |
-| `scripts/arch_url.py` | `validate`, `encode`, `decode`, `brief` (stdlib + PyYAML) |
-| `examples/` | `pix.arch.yaml`: plano (adicionar PIX). `loja.arch.yaml`: documentação da mesma loja antes do PIX |
-| `viewer/` | Front-end (Vite + React + TS + Tailwind + React Flow + ELK) |
+| `skills/c4-plan/` | **A skill.** Só esta pasta é instalada no projeto de quem usa |
+| `skills/c4-plan/SKILL.md` | Instruções da skill para a IA |
+| `skills/c4-plan/schema/arch.v1.json` | JSON Schema do `arch.yaml` |
+| `skills/c4-plan/scripts/arch_url.py` | `validate`, `encode`, `decode`, `brief` (stdlib + PyYAML) |
+| `skills/c4-plan/examples/` | `pix.arch.yaml`: plano (adicionar PIX). `loja.arch.yaml`: documentação da mesma loja antes do PIX |
+| `viewer/` | Front-end (Vite + React + TS + Tailwind + React Flow + ELK), publicado no GitHub Pages. Não vai junto com a skill |
+| `tests/` | Teste do script Python, inclusive a compatibilidade do link com o viewer |
+
+## Instalar a skill
+
+Copie (ou aponte a ferramenta de instalação para) a pasta `skills/c4-plan/`. Ela não depende do `viewer/`: os links abrem a versão publicada.
 
 ## Como rodar (nesta máquina, Windows)
 
@@ -37,8 +43,8 @@ npm run build    # gera viewer/dist/index.html
 **Script Python** (pelo WSL):
 
 ```powershell
-wsl -d Ubuntu-24.04 --cd /mnt/c/Users/gusta/workspace/c4model -- python3 scripts/arch_url.py encode examples/pix.arch.yaml
-wsl -d Ubuntu-24.04 --cd /mnt/c/Users/gusta/workspace/c4model -- python3 scripts/test_arch_url.py
+wsl -d Ubuntu-24.04 --cd /mnt/c/Users/gusta/workspace/c4model -- python3 skills/c4-plan/scripts/arch_url.py encode skills/c4-plan/examples/pix.arch.yaml
+wsl -d Ubuntu-24.04 --cd /mnt/c/Users/gusta/workspace/c4model -- python3 tests/test_arch_url.py
 ```
 
 **Problemas comuns**
@@ -75,16 +81,16 @@ npm run build    # gera dist/index.html: arquivo único, sem CDN
 
 O workflow [`.github/workflows/pages.yml`](.github/workflows/pages.yml) testa, gera o build e publica no GitHub Pages a cada push no `main`. Para ativar num fork: **Settings → Pages → Source: GitHub Actions**.
 
-O `arch_url.py encode` gera links para essa versão por padrão. Para outro host, defina `C4PLAN_VIEWER_URL`; para testar o build local do viewer, use `encode --local`.
+O `arch_url.py encode` gera links para essa versão por padrão. Para outro host, defina `C4PLAN_VIEWER_URL`; para testar o build local do viewer, use `encode --local` (só num clone deste repositório, depois do `npm run build`).
 
 ## Script
 
 ```bash
-python3 scripts/arch_url.py validate examples/pix.arch.yaml
-python3 scripts/arch_url.py encode   examples/pix.arch.yaml
-python3 scripts/arch_url.py decode   "<link>" -o plano.arch.yaml
-python3 scripts/arch_url.py brief    "<link>" -o plano.arch.md   # em kind: system, a documentação em Markdown
-python3 scripts/test_arch_url.py
+python3 skills/c4-plan/scripts/arch_url.py validate skills/c4-plan/examples/pix.arch.yaml
+python3 skills/c4-plan/scripts/arch_url.py encode   skills/c4-plan/examples/pix.arch.yaml
+python3 skills/c4-plan/scripts/arch_url.py decode   "<link>" -o plano.arch.yaml
+python3 skills/c4-plan/scripts/arch_url.py brief    "<link>" -o plano.arch.md   # em kind: system, a documentação em Markdown
+python3 tests/test_arch_url.py
 ```
 
 Os testes do viewer geram `viewer/src/lib/__fixtures__/pix.ts.hash.txt`, que o teste Python lê, e o Python gera `pix.python.hash.txt`, que o viewer lê. Assim os dois lados ficam presos ao mesmo formato.

@@ -1,4 +1,4 @@
-// Espelha schema/arch.v1.json
+// Espelha skills/c4-plan/schema/arch.v1.json
 export type ElementType = "person" | "system" | "external" | "container" | "database" | "queue" | "component" | "code";
 export type Status = "new" | "changed" | "removed" | "unchanged";
 

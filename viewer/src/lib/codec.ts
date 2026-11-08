@@ -1,5 +1,5 @@
 // Formato do hash: #v1.<base64url(deflate-raw(json))>[~<id da view>]
-// Precisa continuar compatível com scripts/arch_url.py.
+// Precisa continuar compatível com skills/c4-plan/scripts/arch_url.py.
 import type { ArchDoc } from "./types";
 
 export const VERSION = 1;

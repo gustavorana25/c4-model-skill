@@ -1,15 +1,16 @@
-"""Testes do arch_url.py. Rodar: python3 scripts/test_arch_url.py"""
+"""Testes do arch_url.py. Rodar da raiz: python3 tests/test_arch_url.py"""
 import copy
 import os
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
+ROOT = Path(__file__).resolve().parent.parent
+SKILL = ROOT / "skills" / "c4-plan"
+sys.path.insert(0, str(SKILL / "scripts"))
 import arch_url as A  # noqa: E402
 import yaml  # noqa: E402
 
-ROOT = Path(__file__).resolve().parent.parent
-doc = yaml.safe_load((ROOT / "examples" / "pix.arch.yaml").read_text(encoding="utf-8"))
+doc = yaml.safe_load((SKILL / "examples" / "pix.arch.yaml").read_text(encoding="utf-8"))
 fails = 0
 
 
@@ -83,7 +84,7 @@ d["elements"][1]["children"][1]["children"][1].pop("children")  # pix-handler se
 check("aviso: componente novo que não abre", any("pix-handler" in w and "sem children" in w for w in A.validate(d)[1]))
 
 # kind: system (documentação do sistema como é hoje)
-loja = yaml.safe_load((ROOT / "examples" / "loja.arch.yaml").read_text(encoding="utf-8"))
+loja = yaml.safe_load((SKILL / "examples" / "loja.arch.yaml").read_text(encoding="utf-8"))
 errs, warns = A.validate(loja)
 check("exemplo da loja (system) válido e sem avisos", errs == [] and warns == [])
 md = A.brief(loja)

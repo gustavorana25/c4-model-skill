@@ -45,7 +45,7 @@ python3 scripts/arch_url.py encode <plano>.arch.yaml
 - Avisos: corrija se fizer sentido (ex.: algo novo que não abre até o código).
 - Entregue o link ao humano em uma linha, com um resumo curto do que o plano muda (ex.: "3 elementos novos, 2 alterados"). Diga que ele pode apertar **C** (ou **Comentar**), clicar nos cards e perguntar ou pedir mudança, e que a aprovação é aqui no chat.
 
-Viewer: o `encode` gera links para a versão publicada, https://gustavorana25.github.io/c4-model-skill/ (estática; o plano vai no `#hash` e não chega ao servidor). `$C4PLAN_VIEWER_URL` troca o host, e `--local` usa o build local `viewer/dist/index.html` (só para testar mudanças no próprio viewer).
+Viewer: o `encode` gera links para a versão publicada, https://gustavorana25.github.io/c4-model-skill/ (estática; o plano vai no `#hash` e não chega ao servidor). `$C4PLAN_VIEWER_URL` troca o host.
 
 ## 2b. Se você tem um navegador embutido: escute a página
 
@@ -53,7 +53,7 @@ Se você tem ferramentas de navegador (o painel de browser do Claude Code, o bro
 
 **O chat é a fonte da verdade.** A página é só um atalho: o humano aponta um ou mais cards e comenta, e você **responde no chat**, nunca na página. A única coisa que você muda na página é o plano, com `load()`, quando a conversa alterar a estrutura.
 
-Abra o link gerado pelo `encode` como está: ele já é `https://`. (Com `--local`, sirva o `viewer/dist/` por `http://`, ex.: `python3 -m http.server`; alguns navegadores embutidos descartam o `#hash` de links `file://`.)
+Abra o link gerado pelo `encode` como está: ele já é `https://`.
 
 A página expõe `window.c4plan` (rode com a ferramenta de JavaScript do navegador):
 

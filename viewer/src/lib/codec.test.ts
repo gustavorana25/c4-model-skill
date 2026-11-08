@@ -5,7 +5,7 @@ import { buildHash, decodeHash, encodeDoc } from "./codec";
 import type { ArchDoc } from "./types";
 
 const here = (p: string) => new URL(p, import.meta.url);
-const example = load(readFileSync(here("../../../examples/pix.arch.yaml"), "utf8")) as ArchDoc;
+const example = load(readFileSync(here("../../../skills/c4-plan/examples/pix.arch.yaml"), "utf8")) as ArchDoc;
 
 describe("codec", () => {
   test("lê hash gerado pelo arch_url.py (Python)", async () => {

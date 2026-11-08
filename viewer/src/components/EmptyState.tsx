@@ -1,7 +1,7 @@
 import { load } from "js-yaml";
 import { AlertTriangle } from "lucide-react";
 import { useState } from "react";
-import exampleYaml from "../../../examples/pix.arch.yaml?raw";
+import exampleYaml from "../../../skills/c4-plan/examples/pix.arch.yaml?raw";
 import { useStore } from "../store";
 import { Button, cn } from "./ui";
 

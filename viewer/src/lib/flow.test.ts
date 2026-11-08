@@ -7,7 +7,7 @@ import { buildModel } from "./model";
 import type { ArchDoc } from "./types";
 import { computeView, defaultExpanded, revealing } from "./view";
 
-const doc = load(readFileSync(new URL("../../../examples/pix.arch.yaml", import.meta.url), "utf8")) as ArchDoc;
+const doc = load(readFileSync(new URL("../../../skills/c4-plan/examples/pix.arch.yaml", import.meta.url), "utf8")) as ArchDoc;
 const m = buildModel(doc);
 const flow = doc.flows!.find((f) => f.id === "pagar-com-pix")!;
 
