@@ -1,5 +1,6 @@
-// Espelha skills/c4-plan/schema/arch.v1.json
-export type ElementType = "person" | "system" | "external" | "container" | "database" | "queue" | "component" | "code";
+// Espelha skills/blueroll/schema/arch.v1.json
+/** Um tipo da notação do documento (em c4: person, system, external, container, database, queue, component, code) ou de types. */
+export type ElementType = string;
 export type Status = "new" | "changed" | "removed" | "unchanged";
 
 export interface ArchElement {
@@ -52,9 +53,26 @@ export interface Flow {
 /** plan: o que um plano muda (padrão). system: o sistema como é hoje (documentação). */
 export type DocKind = "plan" | "system";
 
+/** Tipo próprio declarado no documento (soma ou substitui os do preset). */
+export interface TypeDef {
+  id: string;
+  label: string;
+  icon?: string;
+  color?: string;
+  card?: "base" | "raised" | "deep";
+  parents?: (string | null)[];
+  context?: boolean;
+  openable?: boolean;
+  autoOpen?: boolean;
+  inside?: string;
+}
+
 export interface ArchDoc {
   version: 1;
   kind?: DocKind;
+  /** Vocabulário de tipos (presets em notations.json); padrão c4. */
+  notation?: string;
+  types?: TypeDef[];
   /** Título; em kind: plan, plan também serve. */
   title?: string;
   plan?: string;

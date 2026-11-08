@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { ancestors as ancestorsOf, buildModel, hasChildren, isWithin, parseDoc, titleOf, type Model } from "./lib/model";
+import { buildModel, hasChildren, isWithin, parseDoc, titleOf, type Model } from "./lib/model";
 import { defaultExpanded, revealing } from "./lib/view";
 import type { ArchDoc } from "./lib/types";
 
@@ -22,12 +22,13 @@ interface State {
    * O que o canvas faz com a câmera depois do próximo layout:
    * "anchor" mantém a caixa no mesmo lugar da tela; "fit" enquadra as caixas.
    */
-  camera: { kind: "anchor" | "fit"; ids: string[]; at: number } | null;
+  /** anchor: a caixa fica no mesmo lugar da tela; fit: enquadra; hop: salto de fluxo, ids = [origem, destino]. */
+  camera: { kind: "anchor" | "fit" | "hop"; ids: string[]; at: number } | null;
   onlyChanges: boolean;
   tab: SideTab;
   loadError: string | null;
   toast: { msg: string; at: number; tone: "ok" | "warn" } | null;
-  /** Um agente está chamando window.c4plan.next() agora. */
+  /** Um agente está chamando window.blueroll.next() agora. */
   listening: boolean;
   /** Algum agente já escutou esta página (para mostrar "não está escutando" só quando faz sentido). */
   everListened: boolean;
@@ -150,10 +151,7 @@ export const useStore = create<State>((set, get) => ({
     const h = fl.hops[i];
     const expanded = revealing(model, revealing(model, get().expanded, h.from), h.to);
     const out = focus && !isWithin(model, h.from, focus) && !isWithin(model, h.to, focus);
-    // a ponta mais profunda primeiro: se não couberem as duas legíveis, a câmera fica nela
-    const depth = (id: string) => ancestorsOf(model, id).length;
-    const ids = [h.from, h.to].sort((a, b) => depth(b) - depth(a));
-    set({ flow: { id: fl.id, hop: i }, expanded, focus: out ? null : focus, camera: { kind: "fit", ids, at: Date.now() } });
+    set({ flow: { id: fl.id, hop: i }, expanded, focus: out ? null : focus, camera: { kind: "hop", ids: [h.from, h.to], at: Date.now() } });
   },
   toggleFollowFlow: () => {
     set((s) => ({ followFlow: !s.followFlow }));

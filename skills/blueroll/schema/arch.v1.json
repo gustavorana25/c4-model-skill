@@ -1,0 +1,347 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://blueroll.dev/schema/arch.v1.json",
+  "title": "Blueroll — diagrama de um plano ou de um sistema (v1)",
+  "description": "Diagrama navegável de caixas aninhadas e setas, com fluxos salto a salto. kind: plan (padrão) mostra o que um plano cria, altera e remove; kind: system documenta como é hoje. notation escolhe o vocabulário de tipos (c4 por padrão).",
+  "type": "object",
+  "required": [
+    "version",
+    "elements"
+  ],
+  "anyOf": [
+    {
+      "required": [
+        "plan"
+      ]
+    },
+    {
+      "required": [
+        "title"
+      ]
+    }
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "kind": {
+      "enum": [
+        "plan",
+        "system"
+      ],
+      "default": "plan",
+      "description": "plan: arquitetura de um plano (status, steps, aprovação). system: documentação do sistema como é hoje (tudo inalterado, sem steps)."
+    },
+    "notation": {
+      "enum": [
+        "c4",
+        "processo",
+        "infra",
+        "dominio",
+        "jornada",
+        "livre"
+      ],
+      "default": "c4",
+      "description": "Vocabulário de tipos (presets em notations.json). Sem notation, o documento é C4."
+    },
+    "types": {
+      "type": "array",
+      "description": "Tipos próprios, somados aos da notação (um tipo com o mesmo id substitui o do preset).",
+      "items": {
+        "$ref": "#/$defs/typeDef"
+      }
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Título do documento. Em kind: plan, plan também serve."
+    },
+    "plan": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Título do plano (kind: plan)."
+    },
+    "description": {
+      "type": "string"
+    },
+    "approved": {
+      "type": "boolean",
+      "default": false,
+      "description": "Só em kind: plan. Marcado quando o humano aprova a estrutura no chat."
+    },
+    "elements": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/element"
+      }
+    },
+    "relations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/relation"
+      }
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/step"
+      }
+    },
+    "flows": {
+      "type": "array",
+      "description": "Como o sistema funciona (depois do plano, em kind: plan): o caminho de uma ação de ponta a ponta. Os steps dizem a ordem de construção; os flows, a ordem de execução.",
+      "items": {
+        "$ref": "#/$defs/flow"
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$",
+      "description": "kebab-case, único em todo o documento."
+    },
+    "status": {
+      "enum": [
+        "new",
+        "changed",
+        "removed",
+        "unchanged"
+      ],
+      "default": "unchanged",
+      "description": "O que o plano faz com este elemento."
+    },
+    "element": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "type": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$",
+          "description": "Um tipo da notação (em c4: person, system, external, container, database, queue, component, code) ou de types. component vive em container, database (tabela, migração) ou queue (evento). code (nível 4) só dentro de component: classe, módulo, função ou arquivo que o plano cria ou altera."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "tech": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string",
+          "description": "Arquivo no repositório (útil em code), ex.: src/payments/pix/create-charge.ts"
+        },
+        "status": {
+          "$ref": "#/$defs/status"
+        },
+        "constraints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "detail": {
+          "deprecated": true,
+          "description": "Obsoleto: ignorado. O que a IA deve respeitar fica em constraints."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Comentário do humano feito na revisão."
+        },
+        "reviewed": {
+          "type": "boolean",
+          "description": "Marcado pelo humano no viewer quando revisou o elemento."
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/element"
+          }
+        }
+      }
+    },
+    "relation": {
+      "type": "object",
+      "required": [
+        "from",
+        "to"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "$ref": "#/$defs/id"
+        },
+        "to": {
+          "$ref": "#/$defs/id"
+        },
+        "label": {
+          "type": "string"
+        },
+        "protocol": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/status"
+        },
+        "contract": {
+          "type": "string",
+          "description": "Caminho ou referência para o contrato (OpenAPI, AsyncAPI, schema)."
+        }
+      }
+    },
+    "step": {
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "touches"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "touches": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "description": "IDs dos elementos que este passo cria ou altera."
+        }
+      }
+    },
+    "flow": {
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "hops"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "hops": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Saltos em ordem. Cada salto segue uma relação existente (no sentido dela, ou no contrário para uma resposta).",
+          "items": {
+            "$ref": "#/$defs/hop"
+          }
+        }
+      }
+    },
+    "hop": {
+      "type": "object",
+      "required": [
+        "from",
+        "to"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "$ref": "#/$defs/id"
+        },
+        "to": {
+          "$ref": "#/$defs/id"
+        },
+        "label": {
+          "type": "string",
+          "description": "O que acontece neste salto. Padrão: o label da relação."
+        }
+      }
+    },
+    "typeDef": {
+      "type": "object",
+      "required": [
+        "id",
+        "label"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Nome do tipo no card."
+        },
+        "icon": {
+          "type": "string",
+          "description": "Nome de ícone da lista icons em notations.json (ex.: server, user, zap). Padrão: square."
+        },
+        "color": {
+          "type": "string",
+          "description": "Nome de cor de notations.json (indigo, blue, azure, sky, teal, cyan, violet, pink, gray) ou #RRGGBB."
+        },
+        "card": {
+          "enum": [
+            "base",
+            "raised",
+            "deep"
+          ],
+          "description": "Fundo do card."
+        },
+        "parents": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "description": "Onde o tipo pode ficar: null = raiz, \"*\" = em qualquer lugar, ou ids de tipos. Padrão: [\"*\"]."
+        },
+        "context": {
+          "type": "boolean",
+          "description": "Ator ou peça de fora: não é implementado pelo plano."
+        },
+        "openable": {
+          "type": "boolean",
+          "description": "Se o plano cria ou altera, precisa ter children."
+        },
+        "autoOpen": {
+          "type": "boolean",
+          "description": "false = começa fechado mesmo quando muda."
+        },
+        "inside": {
+          "type": "string",
+          "description": "Nome do nível quando o diagrama está focado dentro deste tipo."
+        }
+      }
+    }
+  }
+}

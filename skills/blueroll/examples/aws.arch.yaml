@@ -1,0 +1,165 @@
+# yaml-language-server: $schema=../schema/arch.v1.json
+# Exemplo de notation: infra, informativo (kind: system), com dois tipos próprios (papel IAM e monitoramento).
+version: 1
+kind: system
+notation: infra
+title: Entidades da AWS e seus papéis
+description: >
+  Uma aplicação web típica na AWS: o que cada serviço faz, quem fala com quem e
+  quem tem permissão para quê. Siga os fluxos para ver um pedido, um upload e as
+  permissões de ponta a ponta.
+
+types:
+  - id: papel
+    label: Papel IAM
+    icon: shield
+    color: pink
+    parents: ["*"]
+    inside: Permissões
+  - id: monitoramento
+    label: Monitoramento
+    icon: chart
+    color: cyan
+    parents: ["*"]
+
+elements:
+  - id: internet
+    type: externo
+    name: Internet
+    description: Tráfego público. Só entra pelo DNS e pela CloudFront
+
+  - id: conta
+    type: nuvem
+    name: Conta AWS
+    description: Serviços globais ficam fora da região
+    children:
+      - id: route53
+        type: borda
+        name: Route 53
+        description: "DNS: transforma o domínio no endereço da CloudFront"
+      - id: cloudfront
+        type: borda
+        name: CloudFront
+        description: CDN. Entrega o site de perto do usuário e repassa a API
+      - id: papel-api
+        type: papel
+        name: Papel da API
+        description: Assumido pelas tasks da API
+        constraints:
+          - Menor privilégio. Só a fila e o segredo que a API usa
+      - id: papel-lambda
+        type: papel
+        name: Papel da Lambda
+        description: Assumido pela função de miniaturas
+      - id: us-east-1
+        type: regiao
+        name: us-east-1
+        description: Onde os dados e o processamento moram
+        children:
+          - id: s3
+            type: storage
+            name: S3
+            description: Arquivos do site e imagens enviadas
+            constraints:
+              - Bucket privado. Só a CloudFront lê (Origin Access Control)
+          - id: sqs
+            type: fila
+            name: SQS
+            description: Fila de tarefas em segundo plano
+          - id: lambda
+            type: funcao
+            name: Lambda de miniaturas
+            description: Roda só quando chega uma imagem nova
+          - id: secrets
+            type: segredo
+            name: Secrets Manager
+            description: Senha do banco, com rotação automática
+          - id: cloudwatch
+            type: monitoramento
+            name: CloudWatch
+            description: Logs, métricas e alarmes de tudo
+          - id: vpc
+            type: rede
+            name: VPC
+            description: Rede privada. Só o load balancer recebe tráfego de fora
+            children:
+              - id: alb
+                type: borda
+                name: Load balancer
+                tech: ALB
+                description: Distribui as requisições entre as tasks da API
+              - id: ecs
+                type: cluster
+                name: Cluster ECS
+                tech: Fargate
+                description: Roda os containers sem gerenciar servidores
+                children:
+                  - id: api
+                    type: servico
+                    name: API
+                    description: Recebe os pedidos do site
+                  - id: worker
+                    type: servico
+                    name: Worker
+                    description: Processa as tarefas da fila
+              - id: rds
+                type: banco
+                name: RDS
+                tech: PostgreSQL
+                description: Banco principal
+                constraints:
+                  - Sem IP público. Só acessível de dentro da VPC
+
+relations:
+  - { from: internet, to: route53, label: resolve o domínio, protocol: DNS }
+  - { from: internet, to: cloudfront, label: acessa o site, protocol: HTTPS }
+  - { from: cloudfront, to: s3, label: busca arquivos estáticos }
+  - { from: cloudfront, to: alb, label: repassa /api }
+  - { from: alb, to: api, label: distribui as requisições }
+  - { from: api, to: rds, label: lê e grava pedidos, protocol: SQL }
+  - { from: api, to: sqs, label: publica tarefas }
+  - { from: worker, to: sqs, label: consome tarefas }
+  - { from: worker, to: rds, label: atualiza o status }
+  - { from: api, to: secrets, label: lê a senha do banco }
+  - { from: api, to: papel-api, label: assume o papel }
+  - { from: papel-api, to: secrets, label: permite ler }
+  - { from: papel-api, to: sqs, label: permite publicar }
+  - { from: s3, to: lambda, label: dispara no upload, protocol: evento }
+  - { from: lambda, to: s3, label: grava a miniatura }
+  - { from: lambda, to: papel-lambda, label: assume o papel }
+  - { from: papel-lambda, to: s3, label: permite ler e gravar }
+  - { from: api, to: cloudwatch, label: logs e métricas }
+  - { from: worker, to: cloudwatch, label: logs e métricas }
+  - { from: lambda, to: cloudwatch, label: logs e duração }
+
+flows:
+  - id: pedido
+    title: Um pedido chega da internet
+    description: Do domínio digitado até o pedido gravado e a confirmação em segundo plano
+    hops:
+      - { from: internet, to: route53, label: o navegador descobre para onde ir }
+      - { from: internet, to: cloudfront, label: o usuário abre o site }
+      - { from: cloudfront, to: alb, label: POST /api/pedidos segue para a região }
+      - { from: alb, to: api, label: escolhe uma task saudável }
+      - { from: api, to: papel-api, label: usa as credenciais temporárias da task }
+      - { from: api, to: secrets, label: pega a senha do banco }
+      - { from: api, to: rds, label: grava o pedido }
+      - { from: api, to: sqs, label: agenda o e-mail de confirmação }
+      - { from: sqs, to: worker, label: o worker recebe a tarefa }
+      - { from: worker, to: rds, label: marca o e-mail como enviado }
+  - id: upload
+    title: Upload de imagem gera miniatura
+    hops:
+      - { from: s3, to: lambda, label: evento ObjectCreated chama a função }
+      - { from: lambda, to: papel-lambda, label: roda com as permissões do papel }
+      - { from: lambda, to: s3, label: grava a miniatura ao lado da original }
+      - { from: lambda, to: cloudwatch, label: registra quanto tempo levou }
+  - id: permissoes
+    title: Quem pode o quê
+    description: Cada serviço só alcança o que o papel dele permite
+    hops:
+      - { from: api, to: papel-api }
+      - { from: papel-api, to: secrets, label: só este segredo }
+      - { from: papel-api, to: sqs, label: só publicar nesta fila }
+      - { from: lambda, to: papel-lambda }
+      - { from: papel-lambda, to: s3, label: só este bucket }

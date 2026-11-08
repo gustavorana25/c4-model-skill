@@ -1,0 +1,162 @@
+{
+  "$comment": "Presets de notação do Blueroll. Lido por scripts/arch_url.py e importado pelo viewer no build: um lugar só. parents: tipos onde o elemento pode ficar (null = raiz, \"*\" = em qualquer lugar). context: ator ou peça de fora (não é implementado pelo plano). openable: se o plano cria ou altera, precisa ter children. autoOpen: false = começa fechado mesmo quando muda. inside: nome do nível quando o diagrama está focado dentro deste tipo. direction (na notação): RIGHT desenha da esquerda para a direita (padrão DOWN). iconByTech: troca o ícone pelo que a tecnologia sugere (web, mobile, API, worker).",
+  "colors": {
+    "indigo": "#9DB8FF",
+    "blue": "#8FB0FF",
+    "azure": "#6EA8FF",
+    "sky": "#8FC1FF",
+    "teal": "#4FD1C5",
+    "cyan": "#67D4F0",
+    "violet": "#B79CFF",
+    "pink": "#F08FC7",
+    "gray": "#A3ACBB"
+  },
+  "cards": {
+    "base": "#141A25",
+    "raised": "#1A2638",
+    "deep": "#1B1F33"
+  },
+  "icons": [
+    "app-window", "bell", "bot", "box", "boxes", "brain", "calendar", "chart", "circle", "clock", "cloud", "cog", "cpu",
+    "database", "diamond", "file-code", "file-text", "flag", "folder", "git-branch", "globe", "hard-drive", "hexagon",
+    "key", "layers", "list", "lock", "mail", "map-pin", "messages-square", "monitor", "network", "package", "play", "puzzle",
+    "router", "rows", "scroll", "server", "shapes", "shield", "smartphone", "split", "square", "stop", "table", "tag",
+    "terminal", "user", "users", "workflow", "wrench", "zap"
+  ],
+  "notations": {
+    "c4": {
+      "label": "C4",
+      "description": "Arquitetura de software: contexto, containers, componentes e código.",
+      "root": "Nível 1 · Contexto",
+      "summary": [
+        { "label": "Containers", "types": ["container", "database", "queue"] },
+        { "label": "Componentes", "types": ["component"] },
+        { "label": "Externos", "types": ["external"] }
+      ],
+      "parts": ["container", "database", "queue", "external"],
+      "types": {
+        "person": { "label": "Pessoa", "icon": "user", "color": "indigo", "parents": [null], "context": true },
+        "system": { "label": "Sistema", "icon": "boxes", "color": "blue", "parents": [null], "context": true, "openable": true, "inside": "Nível 2 · Containers" },
+        "external": { "label": "Sistema externo", "icon": "globe", "color": "gray", "parents": [null], "context": true },
+        "container": { "label": "Container", "icon": "box", "color": "azure", "parents": [null, "system"], "openable": true, "iconByTech": true, "inside": "Nível 3 · Componentes" },
+        "database": { "label": "Banco", "icon": "database", "color": "teal", "parents": [null, "system"], "openable": true, "inside": "Nível 3 · Componentes" },
+        "queue": { "label": "Fila", "icon": "messages-square", "color": "teal", "parents": [null, "system"], "openable": true, "inside": "Nível 3 · Componentes" },
+        "component": { "label": "Componente", "icon": "puzzle", "color": "sky", "card": "raised", "parents": ["container", "database", "queue"], "openable": true, "autoOpen": false, "inside": "Nível 4 · Código" },
+        "code": { "label": "Código", "icon": "file-code", "color": "violet", "card": "deep", "parents": ["component"] }
+      }
+    },
+    "processo": {
+      "label": "Processo",
+      "direction": "RIGHT",
+      "description": "Fluxograma de processo: raias, etapas, decisões, início e fim.",
+      "root": "Visão geral do processo",
+      "summary": [
+        { "label": "Raias", "types": ["raia"] },
+        { "label": "Etapas", "types": ["etapa", "subprocesso"] },
+        { "label": "Decisões", "types": ["decisao"] }
+      ],
+      "parts": ["raia", "subprocesso", "sistema", "ator"],
+      "types": {
+        "raia": { "label": "Raia", "icon": "rows", "color": "gray", "parents": [null], "inside": "Etapas da raia" },
+        "ator": { "label": "Ator", "icon": "user", "color": "indigo", "parents": [null, "raia"], "context": true },
+        "sistema": { "label": "Sistema", "icon": "monitor", "color": "blue", "parents": [null, "raia", "subprocesso"], "context": true },
+        "inicio": { "label": "Início", "icon": "play", "color": "teal", "parents": [null, "raia", "subprocesso"] },
+        "etapa": { "label": "Etapa", "icon": "square", "color": "azure", "parents": [null, "raia", "subprocesso"] },
+        "decisao": { "label": "Decisão", "icon": "split", "color": "pink", "parents": [null, "raia", "subprocesso"] },
+        "espera": { "label": "Espera", "icon": "clock", "color": "gray", "parents": [null, "raia", "subprocesso"] },
+        "documento": { "label": "Documento", "icon": "file-text", "color": "violet", "parents": [null, "raia", "subprocesso"] },
+        "fim": { "label": "Fim", "icon": "stop", "color": "violet", "parents": [null, "raia", "subprocesso"] },
+        "subprocesso": { "label": "Subprocesso", "icon": "layers", "color": "sky", "card": "raised", "parents": [null, "raia"], "inside": "Etapas do subprocesso" }
+      }
+    },
+    "infra": {
+      "label": "Infraestrutura",
+      "description": "Deploy e infraestrutura: nuvem, região, rede, cluster e os recursos dentro.",
+      "root": "Visão geral da infraestrutura",
+      "summary": [
+        { "label": "Serviços", "types": ["servico", "funcao"] },
+        { "label": "Dados", "types": ["banco", "fila", "storage"] },
+        { "label": "Externos", "types": ["externo"] }
+      ],
+      "parts": ["nuvem", "regiao", "rede", "cluster", "externo"],
+      "types": {
+        "usuario": { "label": "Usuário", "icon": "user", "color": "indigo", "parents": [null], "context": true },
+        "externo": { "label": "Serviço externo", "icon": "globe", "color": "gray", "parents": [null], "context": true },
+        "nuvem": { "label": "Nuvem / conta", "icon": "cloud", "color": "blue", "parents": [null], "inside": "Regiões e redes" },
+        "regiao": { "label": "Região", "icon": "map-pin", "color": "blue", "parents": [null, "nuvem"], "inside": "Redes e recursos" },
+        "rede": { "label": "Rede", "icon": "network", "color": "sky", "parents": [null, "nuvem", "regiao"], "inside": "Recursos da rede" },
+        "cluster": { "label": "Cluster", "icon": "boxes", "color": "azure", "card": "raised", "parents": [null, "nuvem", "regiao", "rede"], "inside": "Serviços do cluster" },
+        "borda": { "label": "Borda / gateway", "icon": "router", "color": "cyan", "parents": [null, "nuvem", "regiao", "rede"] },
+        "servico": { "label": "Serviço", "icon": "server", "color": "azure", "parents": [null, "nuvem", "regiao", "rede", "cluster"] },
+        "funcao": { "label": "Função", "icon": "zap", "color": "azure", "parents": [null, "nuvem", "regiao", "rede"] },
+        "banco": { "label": "Banco", "icon": "database", "color": "teal", "parents": [null, "nuvem", "regiao", "rede", "cluster"] },
+        "fila": { "label": "Fila", "icon": "messages-square", "color": "teal", "parents": [null, "nuvem", "regiao", "rede", "cluster"] },
+        "storage": { "label": "Armazenamento", "icon": "hard-drive", "color": "teal", "parents": [null, "nuvem", "regiao", "rede", "cluster"] },
+        "segredo": { "label": "Segredo", "icon": "key", "color": "pink", "parents": [null, "nuvem", "regiao", "rede", "cluster"] }
+      }
+    },
+    "dominio": {
+      "label": "Domínio",
+      "description": "Modelagem de domínio: contextos, agregados, comandos, eventos e políticas.",
+      "root": "Mapa de contextos",
+      "summary": [
+        { "label": "Contextos", "types": ["contexto"] },
+        { "label": "Agregados", "types": ["agregado"] },
+        { "label": "Eventos", "types": ["evento"] }
+      ],
+      "parts": ["contexto", "externo"],
+      "types": {
+        "ator": { "label": "Ator", "icon": "user", "color": "indigo", "parents": [null], "context": true },
+        "externo": { "label": "Sistema externo", "icon": "globe", "color": "gray", "parents": [null], "context": true },
+        "contexto": { "label": "Contexto", "icon": "hexagon", "color": "blue", "parents": [null], "inside": "Dentro do contexto" },
+        "agregado": { "label": "Agregado", "icon": "box", "color": "azure", "card": "raised", "parents": ["contexto"], "inside": "Dentro do agregado" },
+        "entidade": { "label": "Entidade", "icon": "square", "color": "sky", "parents": ["agregado"] },
+        "valor": { "label": "Objeto de valor", "icon": "tag", "color": "sky", "parents": ["agregado"] },
+        "comando": { "label": "Comando", "icon": "terminal", "color": "cyan", "parents": ["contexto", "agregado"] },
+        "evento": { "label": "Evento", "icon": "zap", "color": "pink", "parents": ["contexto", "agregado"] },
+        "politica": { "label": "Política", "icon": "scroll", "color": "violet", "parents": ["contexto"] },
+        "leitura": { "label": "Modelo de leitura", "icon": "table", "color": "teal", "parents": ["contexto"] }
+      }
+    },
+    "jornada": {
+      "label": "Jornada",
+      "direction": "RIGHT",
+      "description": "Jornada do usuário num produto: fases, telas, ações e decisões até chegar a um objetivo.",
+      "root": "Jornada completa",
+      "summary": [
+        { "label": "Fases", "types": ["fase"] },
+        { "label": "Telas", "types": ["tela"] },
+        { "label": "Pontos de saída", "types": ["saida"] }
+      ],
+      "parts": ["persona", "canal", "fase"],
+      "types": {
+        "persona": { "label": "Persona", "icon": "user", "color": "indigo", "parents": [null], "context": true },
+        "canal": { "label": "Canal", "icon": "mail", "color": "gray", "parents": [null, "fase"], "context": true },
+        "fase": { "label": "Fase", "icon": "layers", "color": "blue", "parents": [null], "inside": "Passos da fase" },
+        "tela": { "label": "Tela", "icon": "app-window", "color": "azure", "parents": [null, "fase"] },
+        "acao": { "label": "Ação", "icon": "zap", "color": "cyan", "parents": [null, "fase"] },
+        "decisao": { "label": "Decisão", "icon": "split", "color": "pink", "parents": [null, "fase"] },
+        "saida": { "label": "Saída", "icon": "stop", "color": "gray", "parents": [null, "fase"] },
+        "objetivo": { "label": "Objetivo", "icon": "flag", "color": "teal", "card": "raised", "parents": [null, "fase"] }
+      }
+    },
+    "livre": {
+      "label": "Livre",
+      "description": "Caixas e setas sem regra de aninhamento; base para tipos próprios.",
+      "root": "Visão geral",
+      "summary": [
+        { "label": "Grupos", "types": ["grupo"] },
+        { "label": "Itens", "types": ["item"] },
+        { "label": "Externos", "types": ["externo"] }
+      ],
+      "parts": ["grupo", "externo"],
+      "types": {
+        "ator": { "label": "Ator", "icon": "user", "color": "indigo", "parents": ["*"], "context": true },
+        "grupo": { "label": "Grupo", "icon": "folder", "color": "blue", "parents": ["*"] },
+        "item": { "label": "Item", "icon": "square", "color": "azure", "parents": ["*"] },
+        "dado": { "label": "Dado", "icon": "database", "color": "teal", "parents": ["*"] },
+        "externo": { "label": "Externo", "icon": "globe", "color": "gray", "parents": ["*"], "context": true }
+      }
+    }
+  }
+}

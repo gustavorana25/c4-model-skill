@@ -15,7 +15,7 @@ export default function App() {
   const doc = useStore((s) => s.doc);
 
   useEffect(() => {
-    document.title = doc ? `${titleOf(doc)} · C4 Plan` : "C4 Plan";
+    document.title = doc ? `${titleOf(doc)} · Blueroll` : "Blueroll";
   }, [doc]);
 
   return (

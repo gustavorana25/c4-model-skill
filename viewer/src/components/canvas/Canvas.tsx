@@ -1,10 +1,11 @@
-import { Background, BackgroundVariant, MiniMap, ReactFlow, useReactFlow, type EdgeTypes, type NodeTypes } from "@xyflow/react";
-import { ChevronLeft, ChevronRight, Filter, Home, Maximize2, Minus, Plus, Route, Shrink, UnfoldVertical, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Background, BackgroundVariant, MiniMap, ReactFlow, useReactFlow, useViewport, type EdgeTypes, type NodeTypes } from "@xyflow/react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronLeft, ChevronRight, Filter, Home, Maximize2, Minus, Plus, Route, Shrink, UnfoldVertical, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { hopLabel } from "../../lib/flow";
 import { computeDimmer, flowMarks } from "../../lib/highlight";
 import { layoutView, type FlowNode, type RelationFlowEdge } from "../../lib/layout";
-import { STATUS_META, levelLabel } from "../../lib/meta";
+import { STATUS_META } from "../../lib/meta";
+import { levelLabel } from "../../lib/notation";
 import { ancestors, docHasChanges, statusOf, type Model } from "../../lib/model";
 import type { ArchDoc } from "../../lib/types";
 import { computeView } from "../../lib/view";
@@ -18,8 +19,10 @@ import { RelationEdge } from "./RelationEdge";
 const nodeTypes: NodeTypes = { element: ElementNode, boundary: BoundaryNode };
 const edgeTypes: EdgeTypes = { relation: RelationEdge };
 // espaço para as barras flutuantes (breadcrumb/toolbar em cima, legenda/minimapa embaixo)
-/** Abaixo disso o texto dos cards não dá para ler. */
-const MIN_READABLE_ZOOM = 0.55;
+/** Abaixo disso o texto dos cards fica difícil de ler: um salto não afasta a câmera além disso. */
+const MIN_READABLE_ZOOM = 0.85;
+/** Zoom da câmera quando ela viaja de uma ponta à outra de um salto longo. */
+const TRAVEL_ZOOM = 1;
 const FIT_PADDING = { top: "84px", bottom: "72px", left: "32px", right: "32px" } as const;
 
 /** Só o que muda o tamanho/posição das caixas dispara um novo layout. */
@@ -72,7 +75,7 @@ export function Canvas() {
 
   useEffect(() => {
     let alive = true;
-    layoutView(view)
+    layoutView(view, model.notation.direction)
       .then((r) => alive && (setLaid({ key, focus: view.focus, ...r }), setLayoutError(null)))
       .catch((e: Error) => alive && setLayoutError(e.message));
     return () => {
@@ -96,6 +99,7 @@ export function Canvas() {
     pending.current = null;
     const { cam, before } = p;
     if (cam.kind === "anchor") {
+      travel.current++;
       const a = before.get(cam.ids[0]);
       const b = curAbs.current.get(cam.ids[0]);
       if (!a || !b) return;
@@ -103,16 +107,49 @@ export function Canvas() {
       rf.setViewport({ x: vp.x - (b.x - a.x) * vp.zoom, y: vp.y - (b.y - a.y) * vp.zoom, zoom: vp.zoom }, { duration: 350 });
     } else {
       const ids = [...new Set(cam.ids.map(view.toVisible).filter((x): x is string => !!x))];
+      const trip = ++travel.current;
       // espera o React Flow medir as caixas novas
       setTimeout(() => {
-        // duas pontas longe uma da outra ficariam ilegíveis: enquadra só a primeira (a mais profunda)
+        if (trip !== travel.current) return;
         const box = wrap.current?.getBoundingClientRect();
         const b = rf.getNodesBounds(ids);
         const zoom = box ? Math.min(box.width / (b.width * 1.7), box.height / (b.height * 1.7)) : 1;
-        const target = zoom < MIN_READABLE_ZOOM ? ids.slice(0, 1) : ids;
-        rf.fitView({ nodes: target.map((id) => ({ id })), padding: 0.35, maxZoom: 1.1, duration: 400 });
+        if (cam.kind !== "hop" || ids.length < 2 || zoom >= MIN_READABLE_ZOOM) {
+          rf.fitView({ nodes: ids.map((id) => ({ id })), padding: 0.35, maxZoom: 1.1, duration: 400 });
+          return;
+        }
+        // as duas pontas não cabem legíveis: viaja da origem ao destino sem afastar a câmera
+        void travelHop(ids[0], ids[1], trip);
       }, 60);
     }
+  };
+  const travel = useRef(0);
+  const centerOf = (id: string) => {
+    const n = rf.getInternalNode(id);
+    if (!n) return null;
+    const p = n.internals.positionAbsolute;
+    return { x: p.x + (n.measured.width ?? 0) / 2, y: p.y + (n.measured.height ?? 0) / 2 };
+  };
+  const travelHop = async (from: string, to: string, trip: number) => {
+    const a = centerOf(from);
+    const b = centerOf(to);
+    if (!a || !b) return;
+    const vp = rf.getViewport();
+    const box = wrap.current?.getBoundingClientRect();
+    // 1. a origem na tela, em zoom de leitura (pula se já está)
+    const onScreen = box && vp.zoom >= TRAVEL_ZOOM * 0.9 && vp.zoom <= TRAVEL_ZOOM * 1.2 &&
+      Math.abs(a.x * vp.zoom + vp.x - box.width / 2) < box.width / 2 - 120 &&
+      Math.abs(a.y * vp.zoom + vp.y - box.height / 2) < box.height / 2 - 100;
+    if (!onScreen) {
+      await rf.setCenter(a.x, a.y, { zoom: TRAVEL_ZOOM, duration: 350 });
+      if (trip !== travel.current) return;
+      await new Promise((r) => setTimeout(r, 120));
+      if (trip !== travel.current) return;
+    }
+    // 2. desliza até o destino no mesmo zoom; mais longe, mais tempo (até 1 s)
+    const zoom = onScreen ? vp.zoom : TRAVEL_ZOOM;
+    const px = Math.hypot(b.x - a.x, b.y - a.y) * zoom;
+    await rf.setCenter(b.x, b.y, { zoom, duration: Math.min(1000, Math.max(450, px / 1.6)) });
   };
   useEffect(() => {
     if (!camera || camera.at <= handled.current) return;
@@ -214,6 +251,7 @@ export function Canvas() {
       <CommentComposer />
       <StepBanner />
       <FlowBanner insideNode={marks?.insideNode ?? null} />
+      <HopChips toVisible={view.toVisible} wrap={wrap} />
       {(layoutError || model.problems.length > 0) && (
         <div className="absolute inset-x-4 top-20 z-10 max-h-40 overflow-auto rounded-xl border border-[rgba(242,104,95,.35)] bg-[rgba(242,104,95,.1)] px-4 py-3 text-[13px] text-[#FFC9C4]">
           <b>Problemas no documento</b>
@@ -266,7 +304,7 @@ function Breadcrumbs({ model, focus }: { model: Model; focus: string | null }) {
         );
       })}
       <span className="ml-1.5 mr-1 rounded-md bg-[#161D2A] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[.04em] text-muted">
-        {!focus && openCount ? `${openCount} caixas abertas` : levelLabel(focusType)}
+        {!focus && openCount ? `${openCount} caixas abertas` : levelLabel(model.notation, focusType)}
       </span>
     </nav>
   );
@@ -411,5 +449,62 @@ function StepBanner() {
         <X size={14} />
       </button>
     </div>
+  );
+}
+
+/** Ponta do salto fora da tela: um chip na borda diz onde ela está e leva a câmera até lá. */
+function HopChips({ toVisible, wrap }: { toVisible: (id: string) => string | null; wrap: RefObject<HTMLDivElement | null> }) {
+  const doc = useStore((s) => s.doc)!;
+  const model = useStore((s) => s.model)!;
+  const flow = useStore((s) => s.flow);
+  const rf = useReactFlow();
+  const vp = useViewport();
+  const box = wrap.current?.getBoundingClientRect();
+  const h = flow && doc.flows?.find((f) => f.id === flow.id)?.hops[flow.hop];
+  if (!h || !box) return null;
+  const ends = [
+    { id: toVisible(h.from), prefix: "de", name: model.index.get(h.from)?.name ?? h.from },
+    { id: toVisible(h.to), prefix: "para", name: model.index.get(h.to)?.name ?? h.to },
+  ];
+  if (!ends[0].id || ends[0].id === ends[1].id) return null;
+  return (
+    <>
+      {ends.map((e) => {
+        const n = e.id && rf.getInternalNode(e.id);
+        if (!n) return null;
+        const p = n.internals.positionAbsolute;
+        const w = n.measured.width ?? 0;
+        const hh = n.measured.height ?? 0;
+        const sx = p.x * vp.zoom + vp.x;
+        const sy = p.y * vp.zoom + vp.y;
+        const right = sx > box.width;
+        const left = sx + w * vp.zoom < 0;
+        const below = sy > box.height;
+        const above = sy + hh * vp.zoom < 0;
+        if (!left && !right && !above && !below) return null;
+        const Icon = left ? ArrowLeft : right ? ArrowRight : above ? ArrowUp : ArrowDown;
+        const pos = left
+          ? "left-4 top-1/2 -translate-y-1/2"
+          : right
+            ? "right-4 top-1/2 -translate-y-1/2 flex-row-reverse"
+            : above
+              ? "left-1/2 top-[150px] -translate-x-1/2"
+              : "bottom-20 left-1/2 -translate-x-1/2";
+        return (
+          <button
+            key={e.prefix}
+            type="button"
+            onClick={() => rf.setCenter(p.x + w / 2, p.y + hh / 2, { zoom: Math.max(vp.zoom, MIN_READABLE_ZOOM), duration: 600 })}
+            className={cn(floating, "absolute z-10 flex max-w-[260px] cursor-pointer items-center gap-1.5 px-3 py-1.5 text-[12px] text-fg-2 transition hover:text-fg", pos)}
+            title={`Ir até ${e.name}`}
+          >
+            <Icon size={13} className="shrink-0 text-accent-ink" />
+            <span className="min-w-0 truncate">
+              {e.prefix} <b className="font-semibold text-fg">{e.name}</b>
+            </span>
+          </button>
+        );
+      })}
+    </>
   );
 }

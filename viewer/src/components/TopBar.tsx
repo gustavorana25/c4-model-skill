@@ -30,16 +30,40 @@ function GitHubLink({ className }: { className?: string }) {
 
 export function TopBar() {
   const doc = useStore((s) => s.doc);
+  const notation = useStore((s) => s.model?.notation);
   const commenting = useStore((s) => s.commenting);
   const setCommenting = useStore((s) => s.setCommenting);
 
   return (
     <header className="flex min-h-[60px] shrink-0 flex-wrap items-center gap-4 border-b border-line bg-panel px-5 py-2">
-      <Logo />
+      <a
+        href={location.pathname + location.search}
+        onClick={(e) => {
+          // volta para a tela inicial sem recarregar; o voltar do navegador reabre o diagrama
+          if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+          e.preventDefault();
+          if (!useStore.getState().doc) return;
+          history.pushState(null, "", location.pathname + location.search);
+          useStore.getState().clear();
+        }}
+        title="Início"
+        aria-label="Blueroll, voltar ao início"
+        className="-m-1 rounded-lg p-1 transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-soft"
+      >
+        <Logo />
+      </a>
       {doc && (
         <>
           <span className="h-6 w-px bg-[#232B3A]" />
           <h1 className="min-w-0 truncate text-[15px] font-semibold text-fg">{titleOf(doc)}</h1>
+          {notation && (
+            <span
+              className="-ml-1.5 shrink-0 rounded-md bg-[#161D2A] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[.04em] text-muted"
+              title={notation.description}
+            >
+              Diagrama {notation.label}
+            </span>
+          )}
           <div className="ml-auto flex flex-wrap items-center gap-3.5">
             <ListeningBadge />
             <Button variant="outline" onClick={copyYaml} title="Copiar o documento em YAML">

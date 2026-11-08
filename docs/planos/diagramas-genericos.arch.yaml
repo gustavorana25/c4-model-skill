@@ -1,0 +1,468 @@
+# yaml-language-server: $schema=../../skills/blueroll/schema/arch.v1.json
+version: 1
+plan: Diagramas além do C4 (notações)
+approved: true
+description: >
+  O motor do viewer já é genérico: caixas aninhadas, relações agregadas por nível,
+  fluxos salto a salto, passos, diff de status e comentários. O que prende ao C4 é o
+  vocabulário: a lista fixa de 8 tipos, as regras de aninhamento, os nomes "Nível 1..4"
+  e alguns contadores. O plano troca esse vocabulário fixo por uma "notação": presets
+  prontos (c4, processo, infra, domínio) e tipos customizados declarados no próprio YAML.
+  Links e YAMLs de hoje continuam funcionando como c4.
+
+elements:
+  - id: humano
+    type: person
+    name: Humano
+    description: Pede o diagrama, olha, comenta e aprova no chat
+
+  - id: agente
+    type: external
+    name: Agente de código
+    tech: Claude Code / Cursor
+    description: Lê a skill, escreve o YAML e roda o script
+
+  - id: github-pages
+    type: external
+    name: GitHub Pages
+    description: Hospeda o viewer estático; o diagrama vai no #hash
+
+  - id: projeto
+    type: system
+    name: Blueroll (hoje C4 Plan)
+    status: changed
+    description: Skill + viewer. Passa a desenhar qualquer diagrama de caixas e setas
+    children:
+      # ------------------------------------------------------------ Skill
+      - id: skill
+        type: container
+        name: Skill
+        tech: SKILL.md + Python
+        status: changed
+        description: Instruções, schema, script e exemplos
+        children:
+          - id: instrucoes
+            type: component
+            name: Instruções da skill
+            status: changed
+            description: Ensina a escolher a notação antes de escrever o YAML
+            children:
+              - id: skill-md
+                type: code
+                name: SKILL.md
+                path: skills/blueroll/SKILL.md
+                status: changed
+                description: >
+                  Nova seção "Escolher a notação" (quando usar c4, processo, infra,
+                  domínio ou tipos próprios); descrição ganha gatilhos como
+                  "fluxograma", "diagrama de processo", "mapa de infra"
+                constraints:
+                  - As regras de hoje (status, steps, flows, constraints, escuta) valem para toda notação; só o vocabulário muda
+                  - C4 continua o padrão quando o pedido é arquitetura de software
+
+          - id: contrato
+            type: component
+            name: Contrato do documento
+            status: changed
+            description: Schema e presets de notação, compartilhados por script e viewer
+            constraints:
+              - Os presets vivem em um único arquivo, lido pelo script e importado pelo viewer no build
+            children:
+              - id: schema
+                type: code
+                name: arch.v1.json
+                path: skills/blueroll/schema/arch.v1.json
+                status: changed
+                description: >
+                  Ganha notation (preset) e types (tipos próprios: id, label, icon,
+                  color, parents, openable). element.type deixa de ser enum fixo
+                constraints:
+                  - Mudança aditiva; continua version 1 e hash "#v1."
+                  - Sem notation, o documento é c4 e valida exatamente como hoje
+              - id: notations-json
+                type: code
+                name: notations.json
+                path: skills/blueroll/schema/notations.json
+                status: new
+                description: >
+                  Presets c4, processo (início, etapa, decisão, fim, raia), infra
+                  (região, cluster, serviço, banco, fila) e domínio (contexto, agregado,
+                  evento). Cada tipo: label, ícone lucide, cor, pais permitidos, nomes dos níveis
+                constraints:
+                  - O preset c4 reproduz exatamente TYPE_META, ALLOWED_PARENTS e os nomes de nível atuais
+
+          - id: script
+            type: component
+            name: arch_url.py
+            tech: Python stdlib + PyYAML
+            status: changed
+            description: Valida e gera link e brief usando a notação do documento
+            children:
+              - id: load-notation
+                type: code
+                name: load_notation()
+                path: skills/blueroll/scripts/arch_url.py
+                status: new
+                description: Resolve preset + types do YAML em um vocabulário único
+                constraints:
+                  - Tipo próprio com o mesmo id de um tipo do preset sobrescreve o do preset
+              - id: validate
+                type: code
+                name: validate()
+                path: skills/blueroll/scripts/arch_url.py
+                status: changed
+                description: TYPES, ALLOWED_PARENTS e OPENABLE saem da notação em vez de constantes
+              - id: brief-fn
+                type: code
+                name: brief() / system_doc()
+                path: skills/blueroll/scripts/arch_url.py
+                status: changed
+                description: Nome do tipo no Markdown vem do label da notação (hoje TYPE_PT)
+
+          - id: exemplos
+            type: component
+            name: Exemplos e testes
+            status: changed
+            description: Um exemplo por notação nova, mais testes de compatibilidade
+            children:
+              - id: exemplo-processo
+                type: code
+                name: reembolso.arch.yaml
+                path: skills/blueroll/examples/reembolso.arch.yaml
+                status: new
+                description: Processo de aprovação de reembolso com raias, decisões e um fluxo de recusa
+              - id: exemplo-infra
+                type: code
+                name: infra.arch.yaml
+                path: skills/blueroll/examples/infra.arch.yaml
+                status: new
+                description: Deploy com região, cluster e serviços, usando types próprios
+              - id: testes-py
+                type: code
+                name: test_arch_url.py
+                path: tests/test_arch_url.py
+                status: changed
+                description: Valida todos os exemplos e garante que pix/loja geram o mesmo hash de antes
+                constraints:
+                  - Hash do pix.arch.yaml igual ao fixture atual (compatibilidade de link)
+
+      # ------------------------------------------------------------ Viewer
+      - id: viewer
+        type: container
+        name: Viewer
+        tech: React + Vite + React Flow + ELK
+        status: changed
+        description: Desenha cards, níveis e resumo a partir da notação, não de tipos fixos
+        children:
+          - id: notacao-viewer
+            type: component
+            name: Notação no viewer
+            status: new
+            description: Um lugar só que transforma tipo em rótulo, ícone, cor e nível
+            children:
+              - id: notation-ts
+                type: code
+                name: notation.ts
+                path: viewer/src/lib/notation.ts
+                status: new
+                description: >
+                  resolveNotation(doc) devolve typeMeta(type), levelLabel(profundidade),
+                  isOpenable(type). Tipo desconhecido cai num estilo neutro em vez de quebrar
+                constraints:
+                  - Nenhum componente acessa TYPE_META[el.type] direto; tudo passa por aqui
+              - id: types-ts
+                type: code
+                name: types.ts
+                path: viewer/src/lib/types.ts
+                status: changed
+                description: ElementType vira string; ArchDoc ganha notation e types
+              - id: meta-ts
+                type: code
+                name: meta.ts
+                path: viewer/src/lib/meta.ts
+                status: changed
+                description: Fica só com STATUS_META e a inferência de ícone de container (só no c4)
+              - id: notation-test
+                type: code
+                name: notation.test.ts
+                path: viewer/src/lib/notation.test.ts
+                status: new
+                description: Preset c4 igual ao comportamento atual; tipos próprios; tipo desconhecido
+
+          - id: canvas
+            type: component
+            name: Canvas
+            status: changed
+            description: Cards e caixas leem rótulo, ícone e cor da notação
+            children:
+              - id: canvas-tsx
+                type: code
+                name: Canvas.tsx
+                path: viewer/src/components/canvas/Canvas.tsx
+                status: changed
+                description: Nome do nível pela profundidade da notação ("Raias", "Etapas") em vez de "Nível 3 · Componentes"
+              - id: element-node
+                type: code
+                name: ElementNode.tsx / BoundaryNode.tsx
+                path: viewer/src/components/canvas/ElementNode.tsx
+                status: changed
+                description: Usa typeMeta(el.type) da notação
+              - id: view-ts
+                type: code
+                name: defaultExpanded()
+                path: viewer/src/lib/view.ts
+                status: changed
+                description: Hoje para em "component"; passa a abrir até o penúltimo nível, em qualquer notação
+
+          - id: sidebar
+            type: component
+            name: Resumo e detalhes
+            status: changed
+            description: Contadores e rótulos genéricos
+            children:
+              - id: summary-tsx
+                type: code
+                name: Summary.tsx
+                path: viewer/src/components/sidebar/Summary.tsx
+                status: changed
+                description: Conta por tipo da notação (hoje "Componentes" e containers fixos)
+              - id: model-ts
+                type: code
+                name: implementable()
+                path: viewer/src/lib/model.ts
+                status: changed
+                description: Hoje exclui person/external/system à mão; passa a ler uma flag da notação
+
+          - id: marca
+            type: component
+            name: Marca
+            status: changed
+            description: Nome do produto no cabeçalho e no título da aba
+            constraints:
+              - "Nome: Blueroll; skill em skills/blueroll/, name: blueroll no SKILL.md"
+              - "Links antigos (github.io/c4-model-skill/#v1.…) continuam abrindo; se o repo for renomeado, a URL antiga redireciona preservando o #hash"
+            children:
+              - id: app-tsx
+                type: code
+                name: App.tsx / ui.tsx
+                path: viewer/src/App.tsx
+                status: changed
+                description: Título "· C4 Plan" e logo viram "Blueroll"
+
+      # ------------------------------------------------------------ Docs
+      - id: docs
+        type: container
+        name: Documentação
+        tech: Markdown
+        status: changed
+        description: README apresenta como diagramas de plano, não só C4
+        children:
+          - id: readmes
+            type: component
+            name: READMEs
+            status: changed
+            children:
+              - id: readme
+                type: code
+                name: README.md / README.pt-BR.md
+                path: README.md
+                status: changed
+                description: Seção "Notações" com um print de cada; C4 continua o exemplo principal
+
+relations:
+  - from: humano
+    to: agente
+    label: pede o diagrama e aprova no chat
+  - from: agente
+    to: skill-md
+    label: lê as instruções e escolhe a notação
+  - from: agente
+    to: validate
+    label: roda encode no YAML
+    protocol: CLI
+  - from: validate
+    to: load-notation
+    label: pede o vocabulário do documento
+  - from: load-notation
+    to: notations-json
+    label: carrega o preset
+  - from: validate
+    to: schema
+    label: valida a estrutura (jsonschema)
+  - from: agente
+    to: brief-fn
+    label: gera o brief depois do ok
+    protocol: CLI
+  - from: brief-fn
+    to: load-notation
+    label: nomes dos tipos
+  - from: schema
+    to: notations-json
+    label: enum de presets
+  - from: testes-py
+    to: validate
+    label: valida exemplos e compara hash
+  - from: exemplo-processo
+    to: notations-json
+    label: usa notation processo
+  - from: exemplo-infra
+    to: notations-json
+    label: usa infra + types próprios
+  - from: agente
+    to: app-tsx
+    label: abre o link e escuta
+    protocol: https #hash
+  - from: humano
+    to: app-tsx
+    label: olha e comenta
+  - from: github-pages
+    to: app-tsx
+    label: serve o build
+  - from: app-tsx
+    to: canvas-tsx
+    label: monta o diagrama
+  - from: canvas-tsx
+    to: view-ts
+    label: calcula o que abrir
+  - from: canvas-tsx
+    to: element-node
+    label: renderiza os cards
+  - from: canvas-tsx
+    to: notation-ts
+    label: nome do nível
+  - from: element-node
+    to: notation-ts
+    label: rótulo, ícone e cor do tipo
+  - from: view-ts
+    to: notation-ts
+    label: profundidade da notação
+  - from: summary-tsx
+    to: notation-ts
+    label: tipos para contar
+  - from: model-ts
+    to: notation-ts
+    label: flag de implementável
+  - from: notation-ts
+    to: notations-json
+    label: importa os presets no build
+    status: new
+  - from: notation-ts
+    to: types-ts
+    label: tipos do documento
+  - from: notation-ts
+    to: meta-ts
+    label: ícone de container (só c4)
+  - from: notation-test
+    to: notation-ts
+    label: testa c4, custom e desconhecido
+  - from: readme
+    to: skill-md
+    label: aponta para as instruções
+
+steps:
+  - id: s1-notacoes
+    title: Definir presets de notação em notations.json, com c4 idêntico ao de hoje
+    touches: [notations-json]
+  - id: s2-schema
+    title: Schema aceita notation e types, mantendo version 1
+    touches: [schema]
+  - id: s3-script
+    title: arch_url.py valida e gera brief a partir da notação
+    touches: [load-notation, validate, brief-fn]
+  - id: s4-viewer-lib
+    title: notation.ts no viewer e troca de ElementType por string
+    touches: [notation-ts, types-ts, meta-ts, notation-test]
+  - id: s5-viewer-ui
+    title: Canvas, cards, resumo e abertura inicial leem a notação
+    touches: [canvas-tsx, element-node, view-ts, summary-tsx, model-ts]
+  - id: s6-exemplos
+    title: Exemplos de processo e infra, e testes de compatibilidade de hash
+    touches: [exemplo-processo, exemplo-infra, testes-py]
+  - id: s7-skill
+    title: SKILL.md ensina a escolher a notação
+    touches: [skill-md]
+  - id: s8-marca
+    title: Renomear para Blueroll e atualizar READMEs
+    touches: [app-tsx, readme]
+
+flows:
+  - id: f-processo
+    title: Agente desenha um fluxograma de processo
+    description: Nada de C4 no meio; o viewer mostra raias, etapas e decisões
+    hops:
+      - from: humano
+        to: agente
+        label: '"desenha o processo de reembolso"'
+      - from: agente
+        to: skill-md
+        label: escolhe notation processo
+      - from: agente
+        to: validate
+        label: encode reembolso.arch.yaml
+      - from: validate
+        to: load-notation
+        label: pede os tipos do preset processo
+      - from: load-notation
+        to: notations-json
+        label: etapa, decisão, raia e quem pode ficar dentro de quem
+      - from: validate
+        to: schema
+        label: estrutura ok, decisão dentro de raia ok
+      - from: agente
+        to: app-tsx
+        label: abre o link no navegador
+      - from: app-tsx
+        to: canvas-tsx
+        label: monta a visão geral
+      - from: canvas-tsx
+        to: notation-ts
+        label: nível mostra "Raias", não "Nível 1 · Contexto"
+      - from: canvas-tsx
+        to: element-node
+        label: desenha os cards
+      - from: element-node
+        to: notation-ts
+        label: card "Decisão" com ícone e cor do preset
+
+  - id: f-custom
+    title: Tipo próprio declarado no YAML
+    description: Quando nenhum preset serve, o agente declara os tipos que precisa
+    hops:
+      - from: agente
+        to: validate
+        label: 'YAML com types: [time, squad] sobre infra'
+      - from: validate
+        to: load-notation
+        label: mescla types com o preset base
+      - from: agente
+        to: app-tsx
+        label: abre o link
+      - from: app-tsx
+        to: canvas-tsx
+        label: monta o diagrama
+      - from: canvas-tsx
+        to: element-node
+        label: desenha o card do squad
+      - from: element-node
+        to: notation-ts
+        label: label, ícone e cor vindos do próprio documento; tipo sem estilo cai no neutro
+
+  - id: f-compat
+    title: Link C4 antigo continua abrindo igual
+    description: O caso de falha que mais importa é quebrar os links já compartilhados
+    hops:
+      - from: humano
+        to: app-tsx
+        label: abre um link #v1. de antes da mudança
+      - from: app-tsx
+        to: canvas-tsx
+        label: documento sem notation
+      - from: canvas-tsx
+        to: notation-ts
+        label: assume c4
+      - from: notation-ts
+        to: notations-json
+        label: preset c4, idêntico ao TYPE_META atual
+      - from: canvas-tsx
+        to: element-node
+        label: '"Nível 2 · Containers", cards e cores como hoje'

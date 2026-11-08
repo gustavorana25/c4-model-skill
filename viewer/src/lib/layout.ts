@@ -59,12 +59,13 @@ function labelSize(e: ViewEdge) {
   return { width, height: proto ? 34 : 22 };
 }
 
-export async function layoutView(view: View): Promise<{ nodes: FlowNode[]; edges: RelationFlowEdge[] }> {
+/** direction: DOWN (padrão) ou RIGHT, para jornadas e processos que são uma corrente longa. */
+export async function layoutView(view: View, direction: "DOWN" | "RIGHT" = "DOWN"): Promise<{ nodes: FlowNode[]; edges: RelationFlowEdge[] }> {
   const root: ElkNode = {
     id: "root",
     layoutOptions: {
       "elk.algorithm": "layered",
-      "elk.direction": "DOWN",
+      "elk.direction": direction,
       "elk.hierarchyHandling": "INCLUDE_CHILDREN",
       "elk.edgeRouting": "ORTHOGONAL",
       "elk.layered.spacing.nodeNodeBetweenLayers": "100",

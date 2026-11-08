@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SKILL = ROOT / "skills" / "c4-plan"
+SKILL = ROOT / "skills" / "blueroll"
 sys.path.insert(0, str(SKILL / "scripts"))
 import arch_url as A  # noqa: E402
 import yaml  # noqa: E402
@@ -97,6 +97,42 @@ check("system: sem título é erro", any("title" in e for e in A.validate({k: v 
 check("kind inválido é erro", any("kind" in e for e in A.validate({**loja, "kind": "outro"})[0]))
 check("plan continua aceitando title no lugar de plan",
       A.validate({**{k: v for k, v in doc.items() if k != "plan"}, "title": "X"})[0] == [])
+
+# notações (vocabulário de tipos)
+py_fixture = ROOT / "viewer" / "src" / "lib" / "__fixtures__" / "pix.python.hash.txt"
+check("hash do PIX igual ao de antes das notações (links antigos)",
+      A.encode_payload(doc) == py_fixture.read_text(encoding="utf-8").strip())
+for name in ("aws", "jornada"):
+    ex = yaml.safe_load((SKILL / "examples" / f"{name}.arch.yaml").read_text(encoding="utf-8"))
+    check(f"exemplo {name} válido e sem avisos", A.validate(ex) == ([], []))
+check("notation inexistente é erro", any("notation" in e for e in A.validate({**doc, "notation": "nada"})[0]))
+check("tipo de outra notação é erro", any("não existe na notação processo" in e for e in A.validate({**doc, "notation": "processo"})[0]))
+proc = {"version": 1, "kind": "system", "notation": "processo", "title": "P",
+        "elements": [{"id": "r", "type": "raia", "name": "R", "children": [{"id": "e", "type": "etapa", "name": "E"}]},
+                     {"id": "x", "type": "time", "name": "X"}],
+        "types": [{"id": "time", "label": "Time", "icon": "users", "color": "pink"}], "flows": [{"id": "f", "title": "F", "hops": [{"from": "x", "to": "e"}]}],
+        "relations": [{"from": "x", "to": "e"}]}
+check("tipo próprio é aceito", A.validate(proc) == ([], []))
+check("aninhamento segue a notação", any("não pode ficar" in e for e in A.validate(
+    {**proc, "elements": [{"id": "e", "type": "etapa", "name": "E", "children": [{"id": "r", "type": "raia", "name": "R"}]}], "relations": [], "flows": []})[0]))
+check("parents de tipo próprio precisa existir", any("parents 'nada'" in e for e in A.validate(
+    {**proc, "types": [{"id": "time", "label": "Time", "parents": ["nada"]}]})[0]))
+check("cor inválida é erro", any("color" in e for e in A.validate({**proc, "types": [{"id": "time", "label": "T", "color": "roxo"}]})[0]))
+check("ícone desconhecido é aviso", any("ícone" in w for w in A.validate({**proc, "types": [{"id": "time", "label": "T", "icon": "foguete"}]})[1]))
+check("brief usa o rótulo da notação", "(etapa)" in A.brief(proc) and "**R** (raia)" in A.brief(proc))
+infra = {"version": 1, "notation": "infra", "plan": "Réplica",
+         "elements": [{"id": "db-replica", "type": "banco", "name": "Réplica", "tech": "PostgreSQL 16", "status": "new"}],
+         "steps": [{"id": "s1", "title": "Criar", "touches": ["db-replica"]}]}
+check("brief de plano em outra notação", A.validate(infra) == ([], []) and A.brief(infra).startswith("# Plano: Réplica")
+      and "(`db-replica` · banco, PostgreSQL 16 · novo)" in A.brief(infra))
+aws = yaml.safe_load((SKILL / "examples" / "aws.arch.yaml").read_text(encoding="utf-8"))
+check("documentação usa o rótulo do tipo próprio", "**Papel da API** (papel iam)" in A.brief(aws) and A.brief(aws).startswith("# Diagrama: "))
+_b = os.environ.pop("BLUEROLL_VIEWER_URL", None)
+os.environ["BLUEROLL_VIEWER_URL"] = "https://b.host/"
+check("BLUEROLL_VIEWER_URL tem prioridade", A.default_base() == "https://b.host/")
+os.environ.pop("BLUEROLL_VIEWER_URL")
+if _b is not None:
+    os.environ["BLUEROLL_VIEWER_URL"] = _b
 
 print(f"\n{'TUDO OK' if not fails else f'{fails} falha(s)'}")
 sys.exit(1 if fails else 0)

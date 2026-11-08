@@ -1,4 +1,4 @@
-# Viewer do C4 Plan
+# Viewer do Blueroll
 
 Front-end que abre os links gerados pela skill: Vite + React + TypeScript + Tailwind + React Flow + ELK. É estático e não vai junto com a skill. Quem usa a skill abre a versão publicada em https://gustavorana25.github.io/c4-model-skill/.
 
@@ -22,7 +22,7 @@ Da raiz do repositório também funciona: `npm run setup`, `npm run dev`, `npm t
 
 O workflow [`.github/workflows/pages.yml`](../.github/workflows/pages.yml) testa, gera o build e publica no GitHub Pages a cada push no `main`. Para ativar num fork: **Settings → Pages → Source: GitHub Actions**.
 
-O `arch_url.py encode` gera links para a versão publicada por padrão. Para outro host, defina `C4PLAN_VIEWER_URL`. Para testar o build local, use `encode --local`, que só funciona num clone deste repositório e depois do `npm run build`. Sirva o `dist/` por `http://` (ex.: `python3 -m http.server`), porque alguns navegadores embutidos descartam o `#hash` de links `file://`.
+O `arch_url.py encode` gera links para a versão publicada por padrão. Para outro host, defina `BLUEROLL_VIEWER_URL` (`C4PLAN_VIEWER_URL` ainda vale). Para testar o build local, use `encode --local`, que só funciona num clone deste repositório e depois do `npm run build`. Sirva o `dist/` por `http://` (ex.: `python3 -m http.server`), porque alguns navegadores embutidos descartam o `#hash` de links `file://`.
 
 ## Formato do link
 
@@ -32,17 +32,21 @@ O `arch_url.py encode` gera links para a versão publicada por padrão. Para out
 
 O estado inteiro vai no `#hash`, que **não é enviado ao servidor**.
 
-O codec existe em dois lugares, [`src/lib/codec.ts`](src/lib/codec.ts) e [`skills/c4-plan/scripts/arch_url.py`](../skills/c4-plan/scripts/arch_url.py), e um teste prende os dois ao mesmo formato. Os testes do viewer geram `src/lib/__fixtures__/pix.ts.hash.txt`, que o teste Python lê, e o Python gera `pix.python.hash.txt`, que o viewer lê.
+O codec existe em dois lugares, [`src/lib/codec.ts`](src/lib/codec.ts) e [`skills/blueroll/scripts/arch_url.py`](../skills/blueroll/scripts/arch_url.py), e um teste prende os dois ao mesmo formato. Os testes do viewer geram `src/lib/__fixtures__/pix.ts.hash.txt`, que o teste Python lê, e o Python gera `pix.python.hash.txt`, que o viewer lê.
+
+## Notações
+
+Os tipos de caixa (rótulo, ícone, cor, aninhamento, nome dos níveis) vêm de [`skills/blueroll/schema/notations.json`](../skills/blueroll/schema/notations.json), que o viewer importa no build e o `arch_url.py` lê. [`src/lib/notation.ts`](src/lib/notation.ts) junta o preset de `notation` com os `types` do documento; os componentes só usam `typeMeta()` e `levelLabel()`. Ícone novo entra em `icons` no JSON e no mapa `ICONS` do `notation.ts` (um teste confere que os dois batem).
 
 ## Script e testes do Python
 
 Da raiz do repositório:
 
 ```bash
-python3 skills/c4-plan/scripts/arch_url.py validate skills/c4-plan/examples/pix.arch.yaml
-python3 skills/c4-plan/scripts/arch_url.py encode   skills/c4-plan/examples/pix.arch.yaml
-python3 skills/c4-plan/scripts/arch_url.py decode   "<link>" -o plano.arch.yaml
-python3 skills/c4-plan/scripts/arch_url.py brief    "<link>" -o plano.arch.md   # em kind: system, a documentação em Markdown
+python3 skills/blueroll/scripts/arch_url.py validate skills/blueroll/examples/pix.arch.yaml
+python3 skills/blueroll/scripts/arch_url.py encode   skills/blueroll/examples/pix.arch.yaml
+python3 skills/blueroll/scripts/arch_url.py decode   "<link>" -o plano.arch.yaml
+python3 skills/blueroll/scripts/arch_url.py brief    "<link>" -o plano.arch.md   # em kind: system, a documentação em Markdown
 python3 tests/test_arch_url.py
 ```
 
@@ -56,7 +60,7 @@ python3 tests/test_arch_url.py
 Script Python pelo WSL:
 
 ```powershell
-wsl -d Ubuntu-24.04 --cd /mnt/c/Users/gusta/workspace/c4model -- python3 skills/c4-plan/scripts/arch_url.py encode skills/c4-plan/examples/pix.arch.yaml
+wsl -d Ubuntu-24.04 --cd /mnt/c/Users/gusta/workspace/c4model -- python3 skills/blueroll/scripts/arch_url.py encode skills/blueroll/examples/pix.arch.yaml
 wsl -d Ubuntu-24.04 --cd /mnt/c/Users/gusta/workspace/c4model -- python3 tests/test_arch_url.py
 ```
 

@@ -3,7 +3,8 @@ import type { NodeProps } from "@xyflow/react";
 import { ChevronUp } from "lucide-react";
 import { memo } from "react";
 import type { BoundaryFlowNode } from "../../lib/layout";
-import { STATUS_META, TYPE_META } from "../../lib/meta";
+import { STATUS_META } from "../../lib/meta";
+import { typeMeta } from "../../lib/notation";
 import { statusOf } from "../../lib/model";
 import { useStore } from "../../store";
 import { cn } from "../ui";
@@ -17,7 +18,7 @@ export const BoundaryNode = memo(function BoundaryNode({ data }: NodeProps<Bound
   const setFocus = useStore((s) => s.setFocus);
   const select = useStore((s) => s.select);
   const toggleExpanded = useStore((s) => s.toggleExpanded);
-  const T = TYPE_META[el.type];
+  const T = typeMeta(useStore((s) => s.model!.notation), el.type);
   const st = statusOf(el);
   const tone = open && st !== "unchanged" && st !== "removed" ? STATUS_META[st].stroke : null;
   return (

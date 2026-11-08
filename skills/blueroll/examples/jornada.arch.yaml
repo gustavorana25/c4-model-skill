@@ -1,0 +1,138 @@
+# yaml-language-server: $schema=../schema/arch.v1.json
+# Exemplo de notation: jornada. O caminho de um usuário até usar uma feature, com os pontos de saída.
+version: 1
+kind: system
+notation: jornada
+title: Do "tô com fome" ao entregador no mapa
+description: >
+  A jornada de quem pede comida num app de delivery, da tela inicial até a feature
+  de acompanhar o entregador no mapa, com os pontos onde as pessoas desistem.
+  Os números são de exemplo.
+
+elements:
+  - id: cliente
+    type: persona
+    name: Cliente com fome
+    description: Quer jantar sem sair de casa e saber quando a comida chega
+
+  - id: push
+    type: canal
+    name: Notificação push
+    description: '"Seu pedido saiu para entrega"'
+
+  - id: escolha
+    type: fase
+    name: Escolha
+    description: Da tela inicial ao restaurante escolhido
+    children:
+      - id: inicio
+        type: tela
+        name: Tela inicial
+        description: Restaurantes perto, promoções e categorias
+      - id: busca
+        type: acao
+        name: Busca "pizza"
+      - id: restaurante
+        type: tela
+        name: Página do restaurante
+        description: Cardápio, taxa de entrega e tempo estimado
+      - id: vale-a-pena
+        type: decisao
+        name: Taxa e tempo valem a pena?
+        description: 6 em cada 10 pessoas olham mais de um restaurante antes de decidir
+      - id: fecha-app
+        type: saida
+        name: Fecha o app
+        description: Taxa de entrega alta é o principal motivo
+
+  - id: pedido
+    type: fase
+    name: Pedido
+    description: Do carrinho ao pagamento aprovado
+    children:
+      - id: carrinho
+        type: tela
+        name: Carrinho
+        description: Itens, observações e cupom
+      - id: pagamento
+        type: tela
+        name: Pagamento
+        description: Cartão salvo, Pix ou dinheiro
+      - id: aprovado
+        type: decisao
+        name: Pagamento aprovado?
+      - id: troca-cartao
+        type: tela
+        name: Trocar forma de pagamento
+        description: Sugere Pix quando o cartão é recusado
+      - id: desiste
+        type: saida
+        name: Desiste do pedido
+        description: Cartão recusado duas vezes
+
+  - id: entrega
+    type: fase
+    name: Entrega
+    description: Do pedido confirmado à comida na porta
+    children:
+      - id: confirmado
+        type: tela
+        name: Pedido confirmado
+        description: Mostra o restaurante preparando e o tempo estimado
+      - id: mapa
+        type: objetivo
+        name: Acompanha o entregador no mapa
+        description: Quem acompanha pelo mapa liga 70% menos para o suporte
+      - id: recebe
+        type: acao
+        name: Recebe e avalia
+        description: Nota para o restaurante e para o entregador
+
+relations:
+  - { from: cliente, to: inicio, label: abre o app }
+  - { from: inicio, to: busca }
+  - { from: busca, to: restaurante, label: toca no primeiro resultado }
+  - { from: restaurante, to: vale-a-pena }
+  - { from: vale-a-pena, to: inicio, label: "não: volta e olha outro" }
+  - { from: vale-a-pena, to: fecha-app, label: "não: desiste" }
+  - { from: vale-a-pena, to: carrinho, label: "sim: adiciona os itens" }
+  - { from: carrinho, to: pagamento, label: Finalizar pedido }
+  - { from: pagamento, to: aprovado }
+  - { from: aprovado, to: troca-cartao, label: recusado }
+  - { from: troca-cartao, to: pagamento, label: tenta com Pix }
+  - { from: troca-cartao, to: desiste, label: recusado de novo }
+  - { from: aprovado, to: confirmado, label: aprovado }
+  - { from: confirmado, to: mapa, label: botão "Acompanhar" }
+  - { from: push, to: mapa, label: abre direto no mapa }
+  - { from: mapa, to: recebe, label: entregador chegou }
+
+flows:
+  - id: caminho-feliz
+    title: Do app aberto ao entregador no mapa
+    description: O caminho mais comum, em média 6 minutos até pagar
+    hops:
+      - { from: cliente, to: inicio }
+      - { from: inicio, to: busca }
+      - { from: busca, to: restaurante }
+      - { from: restaurante, to: vale-a-pena, label: olha taxa e tempo }
+      - { from: vale-a-pena, to: carrinho }
+      - { from: carrinho, to: pagamento }
+      - { from: pagamento, to: aprovado, label: paga com o cartão salvo }
+      - { from: aprovado, to: confirmado }
+      - { from: confirmado, to: mapa, label: acompanha o entregador }
+      - { from: mapa, to: recebe }
+  - id: cartao-recusado
+    title: Cartão recusado
+    description: Onde mais se perde pedido já decidido, e como parte se salva
+    hops:
+      - { from: pagamento, to: aprovado }
+      - { from: aprovado, to: troca-cartao, label: banco recusa o cartão }
+      - { from: troca-cartao, to: pagamento, label: escolhe Pix }
+      - { from: pagamento, to: aprovado, label: Pix cai na hora }
+      - { from: aprovado, to: confirmado }
+  - id: volta-pelo-push
+    title: Volta pela notificação
+    description: Quem fechou o app chega na feature pelo push
+    hops:
+      - { from: push, to: mapa, label: toca em "Seu pedido saiu para entrega" }
+      - { from: mapa, to: recebe }

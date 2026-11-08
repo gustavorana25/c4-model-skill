@@ -1,6 +1,7 @@
 import { ElementIcon } from "../ElementIcon";
 import { ArrowRight, Route } from "lucide-react";
-import { STATUS_META, TYPE_META } from "../../lib/meta";
+import { STATUS_META } from "../../lib/meta";
+import { summaryStats, typeMeta } from "../../lib/notation";
 import { isSystemDoc, statusOf, titleOf } from "../../lib/model";
 import type { ArchElement } from "../../lib/types";
 import { useStore } from "../../store";
@@ -70,7 +71,7 @@ function PlanSummary() {
 }
 
 function ElementRow({ el, first, onClick }: { el: ArchElement; first: boolean; onClick: () => void }) {
-  const T = TYPE_META[el.type];
+  const T = typeMeta(useStore((s) => s.model!.notation), el.type);
   return (
     <li className={first ? "" : "border-t border-line"}>
       <button
@@ -101,7 +102,7 @@ const PLAN_HOWTO = [
 
 const SYSTEM_HOWTO = [
   ["Comece pelos fluxos", "Na aba Fluxos, siga o caminho principal salto a salto (← →). O diagrama abre as caixas por onde ele passa."],
-  ["Desça onde quiser", "“Abrir” (ou duplo clique) mostra o que tem dentro, até os arquivos; “Fechar” recolhe."],
+  ["Desça onde quiser", "“Abrir” (ou duplo clique) mostra o que tem dentro; “Fechar” recolhe."],
   ["Pergunte", "Aperte C, clique nos cards e escreva. A resposta vem no chat."],
 ];
 
@@ -135,20 +136,16 @@ function SystemSummary() {
   const openFlow = useStore((s) => s.openFlow);
 
   const els = [...model.index.values()];
-  const count = (types: string[]) => els.filter((e) => types.includes(e.type)).length;
-  const stats = [
-    ["Containers", count(["container", "database", "queue"])],
-    ["Componentes", count(["component"])],
-    ["Externos", count(["external"])],
-  ] as const;
-  // as peças que quem chega precisa conhecer: o que fica dentro dos sistemas, mais os externos
-  const parts = els.filter((e) => ["container", "database", "queue", "external"].includes(e.type));
+  const stats = summaryStats(model.notation, els.map((e) => e.type));
+  // as peças que quem chega precisa conhecer (no c4: o que fica dentro dos sistemas, mais os externos)
+  const partTypes = model.notation.parts;
+  const parts = els.filter((e) => partTypes.includes(e.type));
   const flows = doc.flows ?? [];
 
   return (
     <div className="flex flex-col gap-6 p-5">
       <div>
-        <div className="text-[11px] font-semibold uppercase tracking-[.08em] text-subtle">Sistema</div>
+        <div className="text-[11px] font-semibold uppercase tracking-[.08em] text-subtle">{model.notation.name === "c4" ? "Sistema" : "Diagrama"}</div>
         <h2 className="mt-1 text-lg font-semibold leading-snug text-fg">{titleOf(doc)}</h2>
         {doc.description && <p className="mt-2 text-[13.5px] leading-relaxed text-muted">{doc.description}</p>}
       </div>
@@ -189,14 +186,16 @@ function SystemSummary() {
         </section>
       )}
 
-      <section>
-        <SectionTitle>Peças</SectionTitle>
-        <ul className="overflow-hidden rounded-xl border border-line">
-          {parts.map((e, i) => (
-            <ElementRow key={e.id} el={e} first={!i} onClick={() => goto(e.id)} />
-          ))}
-        </ul>
-      </section>
+      {parts.length > 0 && (
+        <section>
+          <SectionTitle>Peças</SectionTitle>
+          <ul className="overflow-hidden rounded-xl border border-line">
+            {parts.map((e, i) => (
+              <ElementRow key={e.id} el={e} first={!i} onClick={() => goto(e.id)} />
+            ))}
+          </ul>
+        </section>
+      )}
 
       <HowTo items={SYSTEM_HOWTO} />
     </div>

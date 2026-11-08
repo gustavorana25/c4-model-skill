@@ -1,9 +1,14 @@
+import { resolveNotation, typeMeta, type Notation } from "./notation";
 import type { ArchDoc, ArchElement, Status } from "./types";
 
 export interface Model {
   index: Map<string, ArchElement>;
   parent: Map<string, string | null>;
   problems: string[];
+  /** Vocabulário do documento (tipo -> rótulo, ícone, cor, nível). */
+  notation: Notation;
+  /** Algum elemento ou relação muda (ver docHasChanges). */
+  changes: boolean;
 }
 
 /** Valida o mínimo para não quebrar a renderização. A validação completa é do script Python. */
@@ -42,7 +47,9 @@ export function buildModel(doc: ArchDoc): Model {
     (f.hops ?? []).forEach((h, i) => {
       for (const end of [h.from, h.to]) if (!index.has(end)) problems.push(`fluxo ${f.id}, salto ${i + 1}: "${end}" não existe`);
     });
-  return { index, parent, problems };
+  const m = { index, parent, problems, notation: resolveNotation(doc), changes: false };
+  m.changes = docHasChanges(doc, m);
+  return m;
 }
 
 export const titleOf = (doc: ArchDoc): string => doc.title ?? doc.plan ?? "";
@@ -53,7 +60,8 @@ export const docHasChanges = (doc: ArchDoc, m: Model) =>
   [...m.index.values()].some((e) => statusOf(e) !== "unchanged") || (doc.relations ?? []).some((r) => statusOf(r) !== "unchanged");
 
 export const statusOf = (x: { status?: Status }): Status => x.status ?? "unchanged";
-export const implementable = (el: ArchElement) => !["person", "external", "system"].includes(el.type);
+/** O plano implementa (não é ator nem peça de fora). */
+export const implementable = (m: Model, el: ArchElement) => !typeMeta(m.notation, el.type).context;
 export const hasChildren = (el: ArchElement) => (el.children?.length ?? 0) > 0;
 
 /** Do pai até a raiz. */

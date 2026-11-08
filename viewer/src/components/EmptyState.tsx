@@ -1,7 +1,9 @@
 import { load } from "js-yaml";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, ArrowRight, Boxes, Cloud, Route, type LucideIcon } from "lucide-react";
 import { useState } from "react";
-import exampleYaml from "../../../skills/c4-plan/examples/pix.arch.yaml?raw";
+import pixYaml from "../../../skills/blueroll/examples/pix.arch.yaml?raw";
+import awsYaml from "../../../skills/blueroll/examples/aws.arch.yaml?raw";
+import jornadaYaml from "../../../skills/blueroll/examples/jornada.arch.yaml?raw";
 import { useStore } from "../store";
 import { Button, cn } from "./ui";
 
@@ -9,6 +11,12 @@ const STEPS = [
   ["A IA propõe", "Gera o diagrama a partir do plano, com o que é novo, alterado ou removido."],
   ["Você entende", "Vê como o plano afeta o que existe hoje, descendo de nível só onde importa."],
   ["Você comenta", "Aponta os cards e pergunta ou pede mudança. A conversa e a aprovação ficam no chat."],
+];
+
+const EXAMPLES: { title: string; kind: string; desc: string; icon: LucideIcon; yaml: string }[] = [
+  { title: "Pagamento via PIX", kind: "Plano · C4", desc: "O que um plano cria e altera, do contexto até o código.", icon: Boxes, yaml: pixYaml },
+  { title: "Entidades da AWS", kind: "Informativo · Infra", desc: "O papel de cada serviço, quem fala com quem e as permissões.", icon: Cloud, yaml: awsYaml },
+  { title: "Jornada num app de delivery", kind: "Informativo · Jornada", desc: "Da tela inicial ao entregador no mapa, com os pontos de saída.", icon: Route, yaml: jornadaYaml },
 ];
 
 export function EmptyState() {
@@ -36,7 +44,7 @@ export function EmptyState() {
             <br />antes de virar código.
           </h1>
           <p className="max-w-[520px] text-[15px] leading-relaxed text-muted">
-            Abra o link que a IA gerou para o seu plano, ou cole o YAML aqui para ver a arquitetura dele.
+            Abra o link que a IA gerou para o seu plano, ou cole o YAML aqui para ver o diagrama.
           </p>
         </div>
 
@@ -81,15 +89,38 @@ export function EmptyState() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <span className="text-[12.5px] text-subtle">Ou arraste um arquivo .yaml para a área acima</span>
             <div className="flex flex-wrap gap-2.5">
-              <Button variant="outline" size="lg" onClick={() => render(exampleYaml)}>
-                Ver exemplo (PIX)
-              </Button>
               <Button variant="primary" size="lg" onClick={() => render(text)} disabled={!text.trim()}>
                 Abrir diagrama
               </Button>
             </div>
           </div>
         </div>
+
+        <section aria-labelledby="exemplos" className="flex flex-col gap-3">
+          <h2 id="exemplos" className="text-[13px] font-semibold text-fg-2">
+            Ou abra um exemplo
+          </h2>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {EXAMPLES.map((ex) => (
+              <button
+                key={ex.title}
+                type="button"
+                onClick={() => render(ex.yaml)}
+                className="group flex cursor-pointer flex-col gap-2 rounded-[14px] border border-[#222A39] bg-raised p-4 text-left transition hover:border-line-focus hover:bg-hover"
+              >
+                <span className="flex items-center justify-between">
+                  <span className="flex size-8 items-center justify-center rounded-lg bg-accent-bg text-accent-ink">
+                    <ex.icon size={16} />
+                  </span>
+                  <ArrowRight size={15} className="text-subtle transition group-hover:translate-x-0.5 group-hover:text-fg" />
+                </span>
+                <span className="text-[11px] font-semibold uppercase tracking-[.04em] text-subtle">{ex.kind}</span>
+                <b className="text-[14px] text-fg">{ex.title}</b>
+                <span className="text-[12.5px] leading-relaxed text-muted">{ex.desc}</span>
+              </button>
+            ))}
+          </div>
+        </section>
 
         <p className="text-center text-[12.5px] text-subtle">Tudo fica no seu navegador. O link carrega o plano inteiro, sem servidor.</p>
       </div>

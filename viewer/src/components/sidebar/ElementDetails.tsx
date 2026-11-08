@@ -1,6 +1,6 @@
 import { ElementIcon } from "../ElementIcon";
 import { ArrowRight, ChevronRight, FileText, MessageCircle } from "lucide-react";
-import { TYPE_META } from "../../lib/meta";
+import { typeMeta } from "../../lib/notation";
 import { descendants, hasChildren, statusOf, type Model } from "../../lib/model";
 import type { Relation } from "../../lib/types";
 import { useStore } from "../../store";
@@ -14,7 +14,7 @@ export function ElementDetails({ id }: { id: string }) {
   const el = model.index.get(id);
   if (!el) return null;
 
-  const T = TYPE_META[el.type];
+  const T = typeMeta(model.notation, el.type);
   const st = statusOf(el);
   const ids = new Set([el.id, ...descendants(el)]);
   const steps = (doc.steps ?? []).map((s, i) => ({ s, i })).filter(({ s }) => s.touches.some((t) => ids.has(t)));

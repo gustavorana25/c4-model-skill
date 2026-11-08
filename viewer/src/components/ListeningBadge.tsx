@@ -1,7 +1,7 @@
 import { useStore } from "../store";
 import { cn } from "./ui";
 
-/** "IA escutando" enquanto um agente chama window.c4plan.next(); some se nenhum agente nunca escutou. */
+/** "IA escutando" enquanto um agente chama window.blueroll.next(); some se nenhum agente nunca escutou. */
 export function ListeningBadge() {
   const listening = useStore((s) => s.listening);
   const ever = useStore((s) => s.everListened);

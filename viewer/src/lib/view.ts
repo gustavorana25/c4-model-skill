@@ -1,4 +1,5 @@
 import { ancestors, hasChanges, hasChildren, isWithin, statusOf, type Model } from "./model";
+import { typeMeta } from "./notation";
 import type { ArchDoc, ArchElement, Relation, Status } from "./types";
 
 export interface ViewEdge {
@@ -36,7 +37,7 @@ function aggregateStatus(rels: Relation[]): Status {
 }
 
 /**
- * Monta a view C4 focada em `focus` (null = visão geral), com as caixas de `expanded`
+ * Monta a view focada em `focus` (null = visão geral), com as caixas de `expanded`
  * abertas no lugar: elas viram boundaries e os filhos aparecem dentro, em qualquer nível.
  * - Os filhos do foco aparecem sempre.
  * - Elementos de fora aparecem só se tiverem relação com algo dentro do foco,
@@ -116,11 +117,11 @@ export function computeView(doc: ArchDoc, m: Model, focus: string | null, expand
   };
 }
 
-/** Abertura inicial: tudo que o plano toca, até mostrar os componentes (o código fica fechado). */
+/** Abertura inicial: tudo que o plano toca, menos os tipos com autoOpen: false (no c4, component: o código fica fechado). */
 export function defaultExpanded(m: Model): Set<string> {
   const out = new Set<string>();
   for (const el of m.index.values())
-    if (el.type !== "component" && hasChildren(el) && hasChanges(el)) out.add(el.id);
+    if (typeMeta(m.notation, el.type).autoOpen && hasChildren(el) && hasChanges(el)) out.add(el.id);
   return out;
 }
 

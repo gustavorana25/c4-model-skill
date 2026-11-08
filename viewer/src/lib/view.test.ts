@@ -6,7 +6,7 @@ import { buildModel } from "./model";
 import type { ArchDoc } from "./types";
 import { computeView, defaultExpanded } from "./view";
 
-const doc = load(readFileSync(new URL("../../../skills/c4-plan/examples/pix.arch.yaml", import.meta.url), "utf8")) as ArchDoc;
+const doc = load(readFileSync(new URL("../../../skills/blueroll/examples/pix.arch.yaml", import.meta.url), "utf8")) as ArchDoc;
 const m = buildModel(doc);
 const pairs = (v: ReturnType<typeof computeView>) => v.edges.map((e) => `${e.from}>${e.to}`).sort();
 

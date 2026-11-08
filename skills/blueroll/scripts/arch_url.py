@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-"""C4 Plan — converte arch.yaml <-> URL do viewer.
+"""Blueroll — converte arch.yaml <-> URL do viewer.
 
 Dois tipos de documento (campo kind):
   plan    (padrão) o que um plano cria, altera e remove, com steps e aprovação
   system  o sistema como é hoje: documentação, onboarding (tudo inalterado, sem steps)
+
+O vocabulário de tipos vem de notation (c4, processo, infra, dominio, jornada, livre; presets em
+schema/notations.json) mais os types próprios do documento. Sem notation, é c4.
 
 Uso:
   arch_url.py validate <arquivo.yaml|json>
@@ -32,29 +35,46 @@ VERSION = 1
 PREFIX = f"v{VERSION}."
 ROOT = Path(__file__).resolve().parent.parent  # pasta da skill
 SCHEMA_PATH = ROOT / "schema" / "arch.v1.json"
-# build local do viewer; só existe num clone do repositório (skills/c4-plan/ -> raiz)
+# build local do viewer; só existe num clone do repositório (skills/blueroll/ -> raiz)
 VIEWER_PATH = ROOT.parent.parent / "viewer" / "dist" / "index.html"
 # versão publicada pelo workflow do GitHub Pages (.github/workflows/pages.yml)
 PUBLIC_VIEWER_URL = "https://gustavorana25.github.io/c4-model-skill/"
 
+NOTATIONS_PATH = ROOT / "schema" / "notations.json"
+
 KINDS = {"plan", "system"}
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
-TYPES = {"person", "system", "external", "container", "database", "queue", "component", "code"}
 STATUSES = {"new", "changed", "removed", "unchanged"}
-# tipos que, quando o plano os cria ou altera, precisam abrir um nível abaixo (até chegar em code)
-OPENABLE = {"system", "container", "database", "queue", "component"}
-# tipo do filho -> tipos de pai permitidos (None = pode ficar na raiz)
-ALLOWED_PARENTS = {
-    "person": {None},
-    "external": {None},
-    "system": {None},
-    "container": {None, "system"},
-    "database": {None, "system"},
-    "queue": {None, "system"},
-    # dentro de database/queue: tabela, migração, evento (o que muda no dado)
-    "component": {"container", "database", "queue"},
-    "code": {"component"},
-}
+DEFAULT_NOTATION = "c4"
+_PRESETS: dict | None = None
+
+
+def presets() -> dict:
+    """notations.json inteiro (cores, ícones e notações); lido uma vez."""
+    global _PRESETS
+    if _PRESETS is None:
+        _PRESETS = json.loads(NOTATIONS_PATH.read_text(encoding="utf-8"))
+    return _PRESETS
+
+
+def load_notation(doc: dict) -> dict:
+    """Vocabulário do documento: o preset de `notation` (c4 por padrão) mais os `types` próprios.
+    Um tipo próprio com o mesmo id de um tipo do preset substitui o do preset.
+    Devolve {name, root, types: {id: {...}}}; cada tipo tem parents como set (None = raiz, "*" = qualquer lugar)."""
+    name = doc.get("notation") or DEFAULT_NOTATION if isinstance(doc, dict) else DEFAULT_NOTATION
+    base = presets()["notations"].get(name) or presets()["notations"][DEFAULT_NOTATION]
+    types = {k: dict(v) for k, v in base["types"].items()}
+    for t in (doc.get("types") or []) if isinstance(doc, dict) else []:
+        if isinstance(t, dict) and isinstance(t.get("id"), str):
+            types[t["id"]] = {k: v for k, v in t.items() if k != "id"}
+    for t in types.values():
+        t["parents"] = set(t.get("parents") or ["*"])
+    return {"name": name, "root": base.get("root"), "types": types}
+
+
+def type_label(notation: dict, etype: str) -> str:
+    t = notation["types"].get(etype)
+    return t["label"].lower() if t else etype
 
 
 # --------------------------------------------------------------------------- io
@@ -111,6 +131,21 @@ def validate(doc) -> tuple[list[str], list[str]]:
     if not title_of(doc).strip():
         errors.append("title: obrigatório (ou plan, em kind: plan)")
     is_system = kind == "system"
+    note = doc.get("notation", DEFAULT_NOTATION)
+    if note not in presets()["notations"]:
+        errors.append(f"notation: '{note}' não existe (use {', '.join(presets()['notations'])})")
+    notation = load_notation(doc)
+    types = notation["types"]
+    for t in doc.get("types") or []:
+        tid = t.get("id")
+        for par in t.get("parents") or []:
+            if par not in (None, "*") and par not in types:
+                errors.append(f"types({tid}): parents '{par}' não é um tipo")
+        if t.get("icon") and t["icon"] not in presets()["icons"]:
+            warnings.append(f"types({tid}): ícone '{t['icon']}' não existe; o viewer usa square (veja icons em notations.json)")
+        color = t.get("color")
+        if color and color not in presets()["colors"] and not re.match(r"^#[0-9a-fA-F]{6}$", color):
+            errors.append(f"types({tid}): color '{color}' inválida (nome de notations.json ou #RRGGBB)")
     if is_system:
         if doc.get("steps"):
             warnings.append("steps: só fazem sentido em kind: plan; remova (a ordem de execução vai em flows)")
@@ -139,8 +174,9 @@ def validate(doc) -> tuple[list[str], list[str]]:
             if eid in elements:
                 errors.append(f"{p}: id duplicado")
                 continue
-            if etype not in TYPES:
-                errors.append(f"{p}: type inválido '{etype}'")
+            if etype not in types:
+                errors.append(f"{p}: type '{etype}' não existe na notação {notation['name']} "
+                              f"(use {', '.join(types)} ou declare em types)")
             if not el.get("name"):
                 errors.append(f"{p}: name obrigatório")
             if el.get("status", "unchanged") not in STATUSES:
@@ -151,8 +187,8 @@ def validate(doc) -> tuple[list[str], list[str]]:
                 warnings.append(f"{p}: 'detail' não é mais usado; remova (as constraints dizem o que a IA deve seguir)")
 
             ptype = parent.get("type") if parent else None
-            allowed = ALLOWED_PARENTS.get(etype, set())
-            if etype in TYPES and ptype not in allowed:
+            allowed = types[etype]["parents"] if etype in types else {"*"}
+            if "*" not in allowed and ptype not in allowed:
                 where = f"dentro de '{ptype}'" if ptype else "na raiz"
                 ok = ", ".join(sorted("raiz" if a is None else a for a in allowed))
                 errors.append(f"{p}: '{etype}' não pode ficar {where} (permitido: {ok})")
@@ -186,7 +222,7 @@ def validate(doc) -> tuple[list[str], list[str]]:
             if f == t:
                 errors.append(f"{p}: relação de um elemento com ele mesmo")
             elif f in ancestors(t) or t in ancestors(f):
-                errors.append(f"{p}: relação entre pai e filho não faz sentido em C4")
+                errors.append(f"{p}: relação entre pai e filho não faz sentido (o filho já está dentro do pai)")
         if r.get("status", "unchanged") not in STATUSES:
             errors.append(f"{p}: status inválido '{r.get('status')}'")
         elif is_system and r.get("status", "unchanged") != "unchanged":
@@ -259,9 +295,10 @@ def validate(doc) -> tuple[list[str], list[str]]:
             if has_steps and not covered:
                 warnings.append(f"{eid}: status '{st}' mas nenhum step toca este elemento")
             # tudo que muda precisa poder ser aberto até o código
-            if el.get("type") in OPENABLE and not el.get("children"):
-                below = "code" if el["type"] == "component" else "component"
-                warnings.append(f"{eid}: status '{st}' sem children — o humano não consegue abrir; detalhe com '{below}'")
+            et = el.get("type")
+            if types.get(et, {}).get("openable") and not el.get("children"):
+                below = [k for k, t in types.items() if et in t["parents"]]
+                warnings.append(f"{eid}: status '{st}' sem children — o humano não consegue abrir; detalhe com '{'/'.join(below)}'")
 
     return errors, warnings
 
@@ -304,9 +341,6 @@ def decode_payload(s: str) -> dict:
 
 # ---------------------------------------------------------------------- brief
 
-TYPE_PT = {"person": "pessoa", "system": "sistema", "external": "sistema externo", "container": "container",
-           "database": "banco de dados", "queue": "fila", "component": "componente",
-           "code": "código"}
 STATUS_PT = {"new": "novo", "changed": "alterado", "removed": "removido", "unchanged": "inalterado"}
 
 
@@ -315,6 +349,7 @@ def brief(doc: dict, url: str | None = None) -> str:
     Em kind: system, a documentação do sistema em texto (elementos, relações, fluxos)."""
     if doc.get("kind") == "system":
         return system_doc(doc, url)
+    notation = load_notation(doc)
     index: dict[str, dict] = {}
 
     def walk(items):
@@ -325,7 +360,7 @@ def brief(doc: dict, url: str | None = None) -> str:
     walk(doc.get("elements"))
     name = lambda i: index[i]["name"] if i in index else i  # noqa: E731
 
-    out = [f"# Arquitetura do plano: {title_of(doc)}", ""]
+    out = [f"# {'Arquitetura do plano' if notation['name'] == 'c4' else 'Plano'}: {title_of(doc)}", ""]
     if doc.get("approved"):
         out.append("> ✅ Estrutura **aprovada** pelo humano.")
     else:
@@ -343,7 +378,7 @@ def brief(doc: dict, url: str | None = None) -> str:
     def element_block(el: dict) -> list[str]:
         st = el.get("status", "unchanged")
         tech = f", {el['tech']}" if el.get("tech") else ""
-        lines = [f"- **{el['name']}** (`{el['id']}` · {TYPE_PT.get(el['type'], el['type'])}{tech} · {STATUS_PT[st]})"]
+        lines = [f"- **{el['name']}** (`{el['id']}` · {type_label(notation, el['type'])}{tech} · {STATUS_PT[st]})"]
         if el.get("path"):
             lines.append(f"  - Arquivo: `{el['path']}`")
         for c in el.get("constraints") or []:
@@ -390,7 +425,7 @@ def brief(doc: dict, url: str | None = None) -> str:
     touched = {t for s in steps for t in s["touches"]}
     loose = [el for el in index.values()
              if el.get("status", "unchanged") != "unchanged" and el["id"] not in touched
-             and el["type"] not in ("person", "external", "system")
+             and not notation["types"].get(el["type"], {}).get("context")
              and not any(d in touched for d in _descendants(el))]
     if loose:
         out += ["## Mudanças sem passo associado", ""]
@@ -417,8 +452,9 @@ def flow_lines(doc: dict, name, heading: str) -> list[str]:
 
 def system_doc(doc: dict, url: str | None = None) -> str:
     """Documentação do sistema como é hoje: árvore de elementos, relações e fluxos."""
+    notation = load_notation(doc)
     index: dict[str, dict] = {}
-    out = [f"# Arquitetura: {title_of(doc)}", ""]
+    out = [f"# {'Arquitetura' if notation['name'] == 'c4' else 'Diagrama'}: {title_of(doc)}", ""]
     if url:
         out += [f"Diagrama: {url}", ""]
     if doc.get("description"):
@@ -428,7 +464,7 @@ def system_doc(doc: dict, url: str | None = None) -> str:
     def walk(items, depth: int):
         for el in items or []:
             index[el["id"]] = el
-            bits = [TYPE_PT.get(el["type"], el["type"])] + ([el["tech"]] if el.get("tech") else [])
+            bits = [type_label(notation, el["type"])] + ([el["tech"]] if el.get("tech") else [])
             line = f"{'  ' * depth}- **{el['name']}** ({' · '.join(bits)})"
             if el.get("description"):
                 line += f": {el['description'].strip()}"
@@ -457,8 +493,8 @@ def looks_like_link(s: str) -> bool:
 
 
 def default_base() -> str:
-    """$C4PLAN_VIEWER_URL (outro host) ou a versão publicada no GitHub Pages."""
-    return os.environ.get("C4PLAN_VIEWER_URL") or PUBLIC_VIEWER_URL
+    """$BLUEROLL_VIEWER_URL (outro host; $C4PLAN_VIEWER_URL ainda vale) ou a versão publicada no GitHub Pages."""
+    return os.environ.get("BLUEROLL_VIEWER_URL") or os.environ.get("C4PLAN_VIEWER_URL") or PUBLIC_VIEWER_URL
 
 
 def local_base() -> str:
@@ -490,7 +526,7 @@ def main() -> None:
 
     e = sub.add_parser("encode", help="valida e gera a URL do viewer")
     e.add_argument("file")
-    e.add_argument("--base", help=f"URL do viewer (padrão: $C4PLAN_VIEWER_URL ou {PUBLIC_VIEWER_URL})")
+    e.add_argument("--base", help=f"URL do viewer (padrão: $BLUEROLL_VIEWER_URL ou {PUBLIC_VIEWER_URL})")
     e.add_argument("--local", action="store_true", help="usa o build local viewer/dist/index.html")
 
     d = sub.add_parser("decode", help="converte URL/hash de volta para YAML")

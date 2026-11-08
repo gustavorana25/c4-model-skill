@@ -1,6 +1,6 @@
 import { ElementIcon } from "../ElementIcon";
 import { FileText } from "lucide-react";
-import { TYPE_META } from "../../lib/meta";
+import { typeMeta } from "../../lib/notation";
 import { useStore } from "../../store";
 import { cn } from "../ui";
 
@@ -42,7 +42,7 @@ export function StepsPanel() {
               <div className="ml-[50px] mr-2.5 flex flex-col gap-2 pb-3">
                 {s.description && <p className="text-[12.5px] text-muted">{s.description}</p>}
                 {touched.map((el) => {
-                  const T = TYPE_META[el.type];
+                  const T = typeMeta(model.notation, el.type);
                   const contracts = (doc.relations ?? []).filter((r) => (r.from === el.id || r.to === el.id) && r.contract);
                   return (
                     <button

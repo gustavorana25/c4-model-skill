@@ -3,7 +3,8 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { ChevronRight } from "lucide-react";
 import { memo } from "react";
 import type { ElementFlowNode } from "../../lib/layout";
-import { STATUS_META, TYPE_META } from "../../lib/meta";
+import { STATUS_META } from "../../lib/meta";
+import { typeMeta } from "../../lib/notation";
 import { statusOf } from "../../lib/model";
 import type { Status } from "../../lib/types";
 import { useStore } from "../../store";
@@ -17,8 +18,11 @@ const hasFooter = (st: Status, children: boolean) => st !== "unchanged" || child
 export const ElementNode = memo(function ElementNode({ data }: NodeProps<ElementFlowNode>) {
   const { el, dim, selected, hasChildren, commentTarget, flowActive } = data;
   const toggleExpanded = useStore((s) => s.toggleExpanded);
+  // num plano, o que não muda é contexto: fica um pouco atrás do que muda, mas legível.
+  // na documentação (nada muda), tudo tem o mesmo peso.
+  const recede = useStore((s) => !!s.model?.changes);
   const st = statusOf(el);
-  const T = TYPE_META[el.type];
+  const T = typeMeta(useStore((s) => s.model!.notation), el.type);
   const S = STATUS_META[st];
 
   const ring = flowActive
@@ -36,7 +40,7 @@ export const ElementNode = memo(function ElementNode({ data }: NodeProps<Element
       className={cn(
         "relative flex h-full w-full flex-col rounded-xl border px-3.5 py-3 transition-[opacity,box-shadow] duration-200",
         selected ? "border-accent" : "border-[#273042]",
-        st === "unchanged" && !selected && "opacity-[.62]",
+        recede && st === "unchanged" && !selected && "opacity-[.8]",
         dim && "!opacity-[.16]",
       )}
       style={{

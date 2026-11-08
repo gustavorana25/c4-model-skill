@@ -6,7 +6,7 @@
  * carregar uma versão nova do plano com load(). A página não edita o plano.
  *
  * O agente não recebe eventos da página: ele PUXA. Fica num loop chamando
- *   await window.c4plan.next(30000)
+ *   await window.blueroll.next(30000)   (window.c4plan é o mesmo objeto, nome antigo)
  * que só retorna quando o humano faz algo que precisa da IA (ou quando o tempo acaba).
  * A escuta dura enquanto o humano mexer na página: cada interação zera o relógio de
  * inatividade. Depois de IDLE_MS parado, next() devolve {event:"stop"} e a escuta acaba.
@@ -54,7 +54,7 @@ export const idleMs = () => now() - lastActivity;
 
 /** Coloca um evento para o agente. Também vai para o console, para ferramentas que só leem logs. */
 export function emit(ev: BridgeEvent, onExpire?: () => void) {
-  console.info("[c4plan]", JSON.stringify(ev));
+  console.info("[blueroll]", JSON.stringify(ev));
   if (waiter) {
     const w = waiter;
     waiter = null;
@@ -176,7 +176,8 @@ export function load(urlOrHash: string) {
 
 export function installBridge() {
   const api = { version: 3, next, state, load, stop };
-  Object.assign(window, { c4plan: api });
+  // blueroll é o nome; c4plan continua para agentes com a skill antiga instalada
+  Object.assign(window, { blueroll: api, c4plan: api });
   for (const t of ["pointerdown", "pointermove", "keydown", "wheel"]) window.addEventListener(t, touch, { passive: true, capture: true });
   setInterval(refreshListening, 2000);
 }
@@ -191,8 +192,12 @@ export function _resetBridge() {
   stopped = true;
 }
 
+type BridgeApi = { version: number; next: typeof next; state: typeof state; load: typeof load; stop: typeof stop };
+
 declare global {
   interface Window {
-    c4plan?: { version: number; next: typeof next; state: typeof state; load: typeof load; stop: typeof stop };
+    blueroll?: BridgeApi;
+    /** Nome antigo de window.blueroll. */
+    c4plan?: BridgeApi;
   }
 }

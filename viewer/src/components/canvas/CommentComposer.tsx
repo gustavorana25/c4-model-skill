@@ -1,7 +1,7 @@
 import { ArrowUp, AtSign, MessageCircle, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { comment } from "../../bridge";
-import { TYPE_META } from "../../lib/meta";
+import { typeMeta } from "../../lib/notation";
 import { useStore } from "../../store";
 import { ElementIcon } from "../ElementIcon";
 import { cn, floating } from "../ui";
@@ -120,9 +120,9 @@ export function CommentComposer() {
                 onMouseEnter={() => setHi(i)}
                 className={cn("flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px]", i === hi ? "bg-hover text-fg" : "text-fg-2")}
               >
-                <ElementIcon el={o} size={13} className="shrink-0" style={{ color: TYPE_META[o.type].ink }} />
+                <ElementIcon el={o} size={13} className="shrink-0" style={{ color: typeMeta(model.notation, o.type).ink }} />
                 <span className="truncate font-medium">{o.name}</span>
-                <span className="ml-auto truncate text-[11.5px] text-subtle">{TYPE_META[o.type].label}</span>
+                <span className="ml-auto truncate text-[11.5px] text-subtle">{typeMeta(model.notation, o.type).label}</span>
               </button>
             </li>
           ))}

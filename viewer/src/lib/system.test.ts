@@ -6,7 +6,7 @@ import { buildModel, docHasChanges, isSystemDoc, parseDoc, titleOf } from "./mod
 import type { ArchDoc } from "./types";
 import { computeView, revealing } from "./view";
 
-const read = (f: string) => load(readFileSync(new URL(`../../../skills/c4-plan/examples/${f}`, import.meta.url), "utf8")) as ArchDoc;
+const read = (f: string) => load(readFileSync(new URL(`../../../skills/blueroll/examples/${f}`, import.meta.url), "utf8")) as ArchDoc;
 const loja = read("loja.arch.yaml");
 const pix = read("pix.arch.yaml");
 
