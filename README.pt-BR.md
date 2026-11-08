@@ -18,7 +18,7 @@ A mesma skill também documenta um sistema que já existe, para onboarding ou pa
 - **Fluxos salto a salto.** Como o sistema funciona depois do plano ("Login com o app autenticador", "Código errado demais"). Você avança com ← → e o diagrama desce até o nível de cada salto.
 - **Passos do plano ligados à arquitetura.** Cada passo mostra quais elementos ele cria ou altera.
 - **Restrições explícitas.** O que a implementação precisa respeitar ("idempotência por txid", "migração sem lock de tabela").
-- **Outras notações.** `processo` (raias, etapas, decisões), `infra` (nuvem, região, rede, cluster), `dominio` (contextos, agregados, eventos), `jornada` (caminho do usuário até uma feature), `livre`, e tipos próprios no YAML. Veja a seção 1b do [`SKILL.md`](skills/blueroll/SKILL.md).
+- **Outras notações.** `processo` (raias, etapas, decisões), `infra` (nuvem, região, rede, cluster), `dominio` (contextos, agregados, eventos), `jornada` (caminho do usuário até uma feature), `livre`, e tipos próprios no YAML. Veja [`references/notacoes.md`](skills/blueroll/references/notacoes.md).
 - **Português, inglês e espanhol.** O viewer segue o idioma do navegador (com um seletor no cabeçalho). O campo `lang` do YAML define o idioma do brief e das mensagens de validação.
 - **Um brief para a execução.** Depois da sua aprovação, a IA gera um Markdown com a estrutura e as restrições e segue esse documento enquanto implementa.
 
@@ -29,7 +29,7 @@ A mesma skill também documenta um sistema que já existe, para onboarding ou pa
 Para experimentar numa conversa só, cole isto no seu agente depois que ele escrever um plano:
 
 ```text
-Baixe a skill Blueroll para uma pasta temporária, mantendo a estrutura (SKILL.md, scripts/arch_url.py, scripts/messages.py, schema/arch.v1.json, schema/notations.json, schema/notations.i18n.json), a partir de https://raw.githubusercontent.com/gustavorana25/c4-model-skill/main/skills/blueroll/. Leia o SKILL.md inteiro e siga as instruções para mostrar a arquitetura do plano.
+Baixe a skill Blueroll para uma pasta temporária, mantendo a estrutura (SKILL.md, as pastas playbooks/ e references/, scripts/arch_url.py, scripts/messages.py, schema/arch.v1.json, schema/notations.json, schema/notations.i18n.json), a partir de https://raw.githubusercontent.com/gustavorana25/c4-model-skill/main/skills/blueroll/. Leia o SKILL.md inteiro e o playbook que ele indicar, e siga as instruções para mostrar a arquitetura do plano.
 ```
 
 Peça para **baixar** os arquivos, não só para ler a URL: quem gera o link é o `arch_url.py`, e as ferramentas de leitura da web podem entregar ao agente um resumo em vez das instruções completas. O agente vai pedir permissão para baixar e rodar o script. Vale só para aquela conversa; para usar sempre, instale.
@@ -70,7 +70,7 @@ plano ─► arch.yaml ─► link ─► você olha e comenta ─► IA ajusta 
 4. **O chat é a fonte da verdade.** O viewer só mostra. As respostas vêm no chat, e toda mudança passa pelo YAML, que gera um link novo.
 5. Quando você aprova, a IA gera o brief (`<plano>.arch.md`) e executa seguindo a estrutura e as restrições. Se precisar sair delas, ela para e pergunta.
 
-As instruções completas que a IA segue estão em [`skills/blueroll/SKILL.md`](skills/blueroll/SKILL.md).
+As instruções completas que a IA segue começam em [`skills/blueroll/SKILL.md`](skills/blueroll/SKILL.md), que encaminha cada pedido para um playbook em [`playbooks/`](skills/blueroll/playbooks/) (revisar um plano, documentar um sistema, escutar a página, executar, retomar de um link).
 
 ## Desenvolvimento
 
