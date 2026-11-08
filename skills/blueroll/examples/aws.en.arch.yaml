@@ -1,0 +1,167 @@
+# yaml-language-server: $schema=../schema/arch.v1.json
+# infra notation example, reference doc (kind: system), with two custom types (IAM role and monitoring).
+# Same ids as aws.arch.yaml (pt-BR) and aws.es.arch.yaml.
+version: 1
+kind: system
+lang: en
+notation: infra
+title: AWS building blocks and what they do
+description: >
+  A typical web application on AWS: what each service does, who talks to whom and
+  who is allowed to do what. Follow the flows to see a request, an upload and the
+  permissions end to end.
+
+types:
+  - id: papel
+    label: IAM role
+    icon: shield
+    color: pink
+    parents: ["*"]
+    inside: Permissions
+  - id: monitoramento
+    label: Monitoring
+    icon: chart
+    color: cyan
+    parents: ["*"]
+
+elements:
+  - id: internet
+    type: externo
+    name: Internet
+    description: Public traffic. Only comes in through DNS and CloudFront
+
+  - id: conta
+    type: nuvem
+    name: AWS account
+    description: Global services live outside the region
+    children:
+      - id: route53
+        type: borda
+        name: Route 53
+        description: "DNS: turns the domain into the CloudFront address"
+      - id: cloudfront
+        type: borda
+        name: CloudFront
+        description: CDN. Serves the site close to the user and forwards the API
+      - id: papel-api
+        type: papel
+        name: API role
+        description: Assumed by the API tasks
+        constraints:
+          - Least privilege. Only the queue and the secret the API uses
+      - id: papel-lambda
+        type: papel
+        name: Lambda role
+        description: Assumed by the thumbnail function
+      - id: us-east-1
+        type: regiao
+        name: us-east-1
+        description: Where the data and the processing live
+        children:
+          - id: s3
+            type: storage
+            name: S3
+            description: Site files and uploaded images
+            constraints:
+              - Private bucket. Only CloudFront reads it (Origin Access Control)
+          - id: sqs
+            type: fila
+            name: SQS
+            description: Background task queue
+          - id: lambda
+            type: funcao
+            name: Thumbnail Lambda
+            description: Runs only when a new image arrives
+          - id: secrets
+            type: segredo
+            name: Secrets Manager
+            description: Database password, rotated automatically
+          - id: cloudwatch
+            type: monitoramento
+            name: CloudWatch
+            description: Logs, metrics and alarms for everything
+          - id: vpc
+            type: rede
+            name: VPC
+            description: Private network. Only the load balancer takes outside traffic
+            children:
+              - id: alb
+                type: borda
+                name: Load balancer
+                tech: ALB
+                description: Spreads requests across the API tasks
+              - id: ecs
+                type: cluster
+                name: ECS cluster
+                tech: Fargate
+                description: Runs the containers without managing servers
+                children:
+                  - id: api
+                    type: servico
+                    name: API
+                    description: Receives the site's orders
+                  - id: worker
+                    type: servico
+                    name: Worker
+                    description: Processes the queue's tasks
+              - id: rds
+                type: banco
+                name: RDS
+                tech: PostgreSQL
+                description: Main database
+                constraints:
+                  - No public IP. Only reachable from inside the VPC
+
+relations:
+  - { from: internet, to: route53, label: resolves the domain, protocol: DNS }
+  - { from: internet, to: cloudfront, label: opens the site, protocol: HTTPS }
+  - { from: cloudfront, to: s3, label: fetches static files }
+  - { from: cloudfront, to: alb, label: forwards /api }
+  - { from: alb, to: api, label: spreads the requests }
+  - { from: api, to: rds, label: reads and writes orders, protocol: SQL }
+  - { from: api, to: sqs, label: publishes tasks }
+  - { from: worker, to: sqs, label: consumes tasks }
+  - { from: worker, to: rds, label: updates the status }
+  - { from: api, to: secrets, label: reads the database password }
+  - { from: api, to: papel-api, label: assumes the role }
+  - { from: papel-api, to: secrets, label: allows reading }
+  - { from: papel-api, to: sqs, label: allows publishing }
+  - { from: s3, to: lambda, label: triggers on upload, protocol: event }
+  - { from: lambda, to: s3, label: writes the thumbnail }
+  - { from: lambda, to: papel-lambda, label: assumes the role }
+  - { from: papel-lambda, to: s3, label: allows read and write }
+  - { from: api, to: cloudwatch, label: logs and metrics }
+  - { from: worker, to: cloudwatch, label: logs and metrics }
+  - { from: lambda, to: cloudwatch, label: logs and duration }
+
+flows:
+  - id: pedido
+    title: An order arrives from the internet
+    description: From the typed domain to the saved order and the background confirmation
+    hops:
+      - { from: internet, to: route53, label: the browser finds out where to go }
+      - { from: internet, to: cloudfront, label: the user opens the site }
+      - { from: cloudfront, to: alb, label: POST /api/orders goes to the region }
+      - { from: alb, to: api, label: picks a healthy task }
+      - { from: api, to: papel-api, label: uses the task's temporary credentials }
+      - { from: api, to: secrets, label: gets the database password }
+      - { from: api, to: rds, label: saves the order }
+      - { from: api, to: sqs, label: schedules the confirmation email }
+      - { from: sqs, to: worker, label: the worker gets the task }
+      - { from: worker, to: rds, label: marks the email as sent }
+  - id: upload
+    title: An image upload creates a thumbnail
+    hops:
+      - { from: s3, to: lambda, label: the ObjectCreated event calls the function }
+      - { from: lambda, to: papel-lambda, label: runs with the role's permissions }
+      - { from: lambda, to: s3, label: writes the thumbnail next to the original }
+      - { from: lambda, to: cloudwatch, label: records how long it took }
+  - id: permissoes
+    title: Who can do what
+    description: Each service only reaches what its role allows
+    hops:
+      - { from: api, to: papel-api }
+      - { from: papel-api, to: secrets, label: only this secret }
+      - { from: papel-api, to: sqs, label: only publish to this queue }
+      - { from: lambda, to: papel-lambda }
+      - { from: papel-lambda, to: s3, label: only this bucket }

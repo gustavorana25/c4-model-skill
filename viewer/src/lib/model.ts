@@ -1,3 +1,4 @@
+import { t, translate, type Lang } from "../i18n";
 import { resolveNotation, typeMeta, type Notation } from "./notation";
 import type { ArchDoc, ArchElement, Status } from "./types";
 
@@ -13,41 +14,42 @@ export interface Model {
 
 /** Valida o mínimo para não quebrar a renderização. A validação completa é do script Python. */
 export function parseDoc(raw: unknown): ArchDoc {
-  if (!raw || typeof raw !== "object") throw new Error("O documento precisa ser um objeto.");
+  if (!raw || typeof raw !== "object") throw new Error(t("err.notObject"));
   const d = raw as Partial<ArchDoc>;
-  if (!Array.isArray(d.elements)) throw new Error('Documento inválido: falta a lista "elements".');
-  if (typeof d.title !== "string" && typeof d.plan !== "string") throw new Error('Documento inválido: falta "title".');
+  if (!Array.isArray(d.elements)) throw new Error(t("err.noElements"));
+  if (typeof d.title !== "string" && typeof d.plan !== "string") throw new Error(t("err.noTitle"));
   return d as ArchDoc;
 }
 
-export function buildModel(doc: ArchDoc): Model {
+/** lang: idioma dos problemas e dos rótulos da notação (pt-BR nos testes). */
+export function buildModel(doc: ArchDoc, lang: Lang = "pt-BR"): Model {
   const index = new Map<string, ArchElement>();
   const parent = new Map<string, string | null>();
   const problems: string[] = [];
   const walk = (items: ArchElement[] | undefined, p: ArchElement | null) => {
     for (const el of items ?? []) {
       if (!el?.id) {
-        problems.push("Elemento sem id.");
+        problems.push(translate(lang, "prob.noId"));
         continue;
       }
-      if (index.has(el.id)) problems.push(`id duplicado: ${el.id}`);
+      if (index.has(el.id)) problems.push(translate(lang, "prob.dupId", el.id));
       index.set(el.id, el);
       parent.set(el.id, p?.id ?? null);
       walk(el.children, el);
     }
   };
   walk(doc.elements, null);
-  if (doc.version !== 1) problems.push(`version esperada: 1 (recebido: ${String(doc.version)})`);
+  if (doc.version !== 1) problems.push(translate(lang, "prob.version", String(doc.version)));
   for (const r of doc.relations ?? [])
     for (const end of [r.from, r.to])
-      if (!index.has(end)) problems.push(`relação ${r.from} → ${r.to}: "${end}" não existe`);
+      if (!index.has(end)) problems.push(translate(lang, "prob.relation", r.from, r.to, end));
   for (const s of doc.steps ?? [])
-    for (const t of s.touches ?? []) if (!index.has(t)) problems.push(`passo ${s.id}: "${t}" não existe`);
+    for (const t of s.touches ?? []) if (!index.has(t)) problems.push(translate(lang, "prob.step", s.id, t));
   for (const f of doc.flows ?? [])
     (f.hops ?? []).forEach((h, i) => {
-      for (const end of [h.from, h.to]) if (!index.has(end)) problems.push(`fluxo ${f.id}, salto ${i + 1}: "${end}" não existe`);
+      for (const end of [h.from, h.to]) if (!index.has(end)) problems.push(translate(lang, "prob.hop", f.id, i + 1, end));
     });
-  const m = { index, parent, problems, notation: resolveNotation(doc), changes: false };
+  const m = { index, parent, problems, notation: resolveNotation(doc, lang), changes: false };
   m.changes = docHasChanges(doc, m);
   return m;
 }

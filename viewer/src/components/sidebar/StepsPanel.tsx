@@ -1,6 +1,7 @@
 import { ElementIcon } from "../ElementIcon";
 import { FileText } from "lucide-react";
 import { typeMeta } from "../../lib/notation";
+import { useT } from "../../i18n";
 import { useStore } from "../../store";
 import { cn } from "../ui";
 
@@ -10,13 +11,14 @@ export function StepsPanel() {
   const pinned = useStore((s) => s.pinnedStep);
   const pin = useStore((s) => s.pinStep);
   const goto = useStore((s) => s.goto);
+  const t = useT();
   const steps = doc.steps ?? [];
 
-  if (!steps.length) return <p className="p-5 text-[13px] text-subtle">Nenhum passo ligado a este diagrama.</p>;
+  if (!steps.length) return <p className="p-5 text-[13px] text-subtle">{t("steps.none")}</p>;
 
   return (
     <div className="flex flex-col gap-1 px-3 py-4">
-      <p className="mx-2 mb-2.5 text-[13px] text-muted">Clique num passo para ver no diagrama o que ele toca.</p>
+      <p className="mx-2 mb-2.5 text-[13px] text-muted">{t("steps.intro")}</p>
       {steps.map((s, i) => {
         const on = pinned === s.id;
         const touched = s.touches.map((t) => model.index.get(t)).filter((e) => !!e);

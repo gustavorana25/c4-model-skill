@@ -7,6 +7,7 @@ import { STATUS_META } from "../../lib/meta";
 import { typeMeta } from "../../lib/notation";
 import { statusOf } from "../../lib/model";
 import type { Status } from "../../lib/types";
+import { useT } from "../../i18n";
 import { useStore } from "../../store";
 import { cn, StatusPill } from "../ui";
 
@@ -24,6 +25,7 @@ export const ElementNode = memo(function ElementNode({ data }: NodeProps<Element
   const st = statusOf(el);
   const T = typeMeta(useStore((s) => s.model!.notation), el.type);
   const S = STATUS_META[st];
+  const t = useT();
 
   const ring = flowActive
     ? "0 0 0 3px #FFFFFF, 0 0 0 9px rgba(110,155,255,.45), 0 10px 30px rgba(0,0,0,.45)"
@@ -71,9 +73,9 @@ export const ElementNode = memo(function ElementNode({ data }: NodeProps<Element
               e.stopPropagation();
               toggleExpanded(el.id);
             }}
-            title="Abrir aqui, sem sair do diagrama (duplo clique também)"
+            title={t("node.openTitle")}
           >
-            Abrir <ChevronRight size={12} strokeWidth={2.6} />
+            {t("node.open")} <ChevronRight size={12} strokeWidth={2.6} />
           </button>
         )}
       </div>

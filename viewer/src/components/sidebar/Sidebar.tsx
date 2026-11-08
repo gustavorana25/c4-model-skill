@@ -1,3 +1,4 @@
+import { useT } from "../../i18n";
 import { useStore, type SideTab } from "../../store";
 import { cn } from "../ui";
 import { EdgeDetails } from "./EdgeDetails";
@@ -12,11 +13,12 @@ export function Sidebar() {
   const selected = useStore((s) => s.selected);
   const doc = useStore((s) => s.doc)!;
   const steps = doc.steps?.length ?? 0;
+  const t = useT();
 
   const all: { id: SideTab; label: string; count?: number }[] = [
-    { id: "review", label: "Visão geral" },
-    { id: "flows", label: "Fluxos", count: doc.flows?.length ?? 0 },
-    { id: "steps", label: "Passos", count: steps },
+    { id: "review", label: t("side.overview") },
+    { id: "flows", label: t("side.flows"), count: doc.flows?.length ?? 0 },
+    { id: "steps", label: t("side.steps"), count: steps },
   ];
   const tabs = all.filter((t) => t.id !== "steps" || steps > 0); // documentação do sistema não tem passos
 

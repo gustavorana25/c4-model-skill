@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { useT } from "../i18n";
 import { STATUS_META } from "../lib/meta";
 import type { Status } from "../lib/types";
 
@@ -46,9 +47,10 @@ export function Pill({ className, style, children }: { className?: string; style
 
 export function StatusPill({ status, upper }: { status: Status; upper?: boolean }) {
   const s = STATUS_META[status];
+  const t = useT();
   return (
     <Pill style={{ background: s.soft, color: s.ink }} className={upper ? "font-bold uppercase tracking-wide" : ""}>
-      {s.label}
+      {t(`status.${status}`)}
     </Pill>
   );
 }

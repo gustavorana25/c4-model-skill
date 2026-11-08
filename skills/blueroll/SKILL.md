@@ -23,7 +23,7 @@ Script: `python3 <dir-da-skill>/scripts/arch_url.py` (só stdlib + PyYAML; jsons
 
 ## 1. Gerar o `arch.yaml` a partir do plano
 
-Salve ao lado do plano como `<nome-do-plano>.arch.yaml`. Schema: `schema/arch.v1.json`. Exemplo completo: `examples/pix.arch.yaml`.
+Salve ao lado do plano como `<nome-do-plano>.arch.yaml`. Schema: `schema/arch.v1.json`. Exemplos completos: `examples/2fa.arch.yaml` (também em `2fa.en.arch.yaml` e `2fa.es.arch.yaml`) e `examples/pix.arch.yaml`.
 
 Regras:
 - **É a arquitetura do plano, não do sistema inteiro.** Inclua o que o plano cria, altera ou remove, mais o contexto mínimo para entender (quem chama, quem é chamado). Não modele o sistema todo.
@@ -36,6 +36,7 @@ Regras:
 - `flows`: como o sistema **funciona** depois do plano (os `steps` dizem a ordem de construção; os `flows`, a ordem de execução). De 1 a 3 fluxos: o caminho principal e o de falha que mais importa (ex.: "Cliente paga com PIX", "QR Code expira"). Cada `hops[]` é `{from, to, label}` e precisa seguir uma relação existente, no sentido dela ou no contrário para uma resposta. Use os elementos mais específicos (code) e escreva o `label` como o que acontece ("salva o txid antes de chamar o PSP"), não o nome da relação. O viewer desce sozinho até o nível de cada salto.
 - `constraints`: o que a implementação **precisa** respeitar, como regras verificáveis ("idempotência por txid", "migração aditiva, sem lock de tabela"), não descrições. Coloque onde há decisão que importa: contratos, fronteiras com sistemas externos, segurança, dados, migrações, regra de negócio central. O que não tem restrição fica a seu critério na execução.
 - Se um contrato existe no repo, referencie em `relations[].contract`.
+- **Idioma.** Escreva nomes, descrições, rótulos e fluxos no idioma da conversa, e declare-o em `lang` (`pt-BR`, `en` ou `es`; sem o campo, vale `pt-BR`). O `lang` define o idioma do brief, das mensagens do `validate` e dos rótulos dos tipos. O viewer mostra a interface no idioma de quem abre o link; o conteúdo aparece como você escreveu.
 
 ## 1b. Escolher a notação
 

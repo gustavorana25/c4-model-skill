@@ -1,6 +1,7 @@
 import { dump } from "js-yaml";
 import { useEffect } from "react";
 import { buildHash, decodeHash, encodeDoc } from "./lib/codec";
+import { t } from "./i18n";
 import { useStore } from "./store";
 
 let lastWritten = "";
@@ -23,7 +24,7 @@ async function loadFromHash() {
     lastWritten = location.hash;
     st.load(doc, focus);
   } catch (e) {
-    st.clear(`Não consegui abrir o plano deste link: ${(e as Error).message}`);
+    st.clear(t("err.link", (e as Error).message));
   }
 }
 
@@ -87,5 +88,5 @@ export async function copyYaml() {
   const s = useStore.getState();
   if (!s.doc) return;
   await copyText(dump(s.doc, { noRefs: true }));
-  s.notify("YAML copiado");
+  s.notify(t("yaml.copied"));
 }

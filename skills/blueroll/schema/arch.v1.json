@@ -45,6 +45,15 @@
       "default": "c4",
       "description": "Vocabulário de tipos (presets em notations.json). Sem notation, o documento é C4."
     },
+    "lang": {
+      "enum": [
+        "pt-BR",
+        "en",
+        "es"
+      ],
+      "default": "pt-BR",
+      "description": "Idioma em que o documento foi escrito: o do brief, das mensagens de validação e dos rótulos dos tipos do preset no brief. A interface do viewer segue o idioma de quem abre."
+    },
     "types": {
       "type": "array",
       "description": "Tipos próprios, somados aos da notação (um tipo com o mesmo id substitui o do preset).",

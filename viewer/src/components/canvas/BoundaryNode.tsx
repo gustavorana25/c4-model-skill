@@ -6,6 +6,7 @@ import type { BoundaryFlowNode } from "../../lib/layout";
 import { STATUS_META } from "../../lib/meta";
 import { typeMeta } from "../../lib/notation";
 import { statusOf } from "../../lib/model";
+import { useT } from "../../i18n";
 import { useStore } from "../../store";
 import { cn } from "../ui";
 
@@ -20,6 +21,7 @@ export const BoundaryNode = memo(function BoundaryNode({ data }: NodeProps<Bound
   const toggleExpanded = useStore((s) => s.toggleExpanded);
   const T = typeMeta(useStore((s) => s.model!.notation), el.type);
   const st = statusOf(el);
+  const t = useT();
   const tone = open && st !== "unchanged" && st !== "removed" ? STATUS_META[st].stroke : null;
   return (
     <div
@@ -39,7 +41,7 @@ export const BoundaryNode = memo(function BoundaryNode({ data }: NodeProps<Bound
             if (open) select({ kind: "el", id: el.id });
             else if (!isFocus) setFocus(el.id);
           }}
-          title={open ? `Ver detalhes de ${el.name}` : isFocus ? undefined : `Ir para ${el.name}`}
+          title={open ? t("node.details", el.name) : isFocus ? undefined : t("node.goTo", el.name)}
         >
           <ElementIcon el={el} size={14} style={tone ? { color: tone } : undefined} />
           <span className="truncate">{el.name}</span>
@@ -56,9 +58,9 @@ export const BoundaryNode = memo(function BoundaryNode({ data }: NodeProps<Bound
               e.stopPropagation();
               toggleExpanded(el.id);
             }}
-            title="Fechar esta caixa"
+            title={t("node.closeTitle")}
           >
-            Fechar <ChevronUp size={12} strokeWidth={2.6} />
+            {t("node.close")} <ChevronUp size={12} strokeWidth={2.6} />
           </button>
         )}
       </div>

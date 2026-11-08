@@ -8,6 +8,9 @@ Dois tipos de documento (campo kind):
 O vocabulário de tipos vem de notation (c4, processo, infra, dominio, jornada, livre; presets em
 schema/notations.json) mais os types próprios do documento. Sem notation, é c4.
 
+O idioma das mensagens e do brief vem de lang (pt-BR, en, es; padrão pt-BR). Os rótulos dos
+tipos do preset saem traduzidos (schema/notations.i18n.json); os types próprios ficam como estão.
+
 Uso:
   arch_url.py validate <arquivo.yaml|json>
   arch_url.py encode   <arquivo.yaml|json> [--base URL | --local]
@@ -31,6 +34,9 @@ import sys
 import zlib
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from messages import DEFAULT_LANG, LANGS, lang_of, msg  # noqa: E402
+
 VERSION = 1
 PREFIX = f"v{VERSION}."
 ROOT = Path(__file__).resolve().parent.parent  # pasta da skill
@@ -41,12 +47,14 @@ VIEWER_PATH = ROOT.parent.parent / "viewer" / "dist" / "index.html"
 PUBLIC_VIEWER_URL = "https://gustavorana25.github.io/c4-model-skill/"
 
 NOTATIONS_PATH = ROOT / "schema" / "notations.json"
+NOTATIONS_I18N_PATH = ROOT / "schema" / "notations.i18n.json"
 
 KINDS = {"plan", "system"}
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 STATUSES = {"new", "changed", "removed", "unchanged"}
 DEFAULT_NOTATION = "c4"
 _PRESETS: dict | None = None
+_I18N: dict | None = None
 
 
 def presets() -> dict:
@@ -57,13 +65,24 @@ def presets() -> dict:
     return _PRESETS
 
 
+def preset_texts(lang: str, name: str) -> dict:
+    """Textos traduzidos de um preset (vazio em pt-BR, que é o próprio notations.json)."""
+    global _I18N
+    if lang == DEFAULT_LANG:
+        return {}
+    if _I18N is None:
+        _I18N = json.loads(NOTATIONS_I18N_PATH.read_text(encoding="utf-8"))
+    return _I18N.get(lang, {}).get(name, {})
+
+
 def load_notation(doc: dict) -> dict:
     """Vocabulário do documento: o preset de `notation` (c4 por padrão) mais os `types` próprios.
     Um tipo próprio com o mesmo id de um tipo do preset substitui o do preset.
     Devolve {name, root, types: {id: {...}}}; cada tipo tem parents como set (None = raiz, "*" = qualquer lugar)."""
     name = doc.get("notation") or DEFAULT_NOTATION if isinstance(doc, dict) else DEFAULT_NOTATION
     base = presets()["notations"].get(name) or presets()["notations"][DEFAULT_NOTATION]
-    types = {k: dict(v) for k, v in base["types"].items()}
+    tr = preset_texts(lang_of(doc), name if name in presets()["notations"] else DEFAULT_NOTATION).get("types", {})
+    types = {k: {**v, **tr.get(k, {})} for k, v in base["types"].items()}
     for t in (doc.get("types") or []) if isinstance(doc, dict) else []:
         if isinstance(t, dict) and isinstance(t.get("id"), str):
             types[t["id"]] = {k: v for k, v in t.items() if k != "id"}
@@ -104,9 +123,13 @@ def validate(doc) -> tuple[list[str], list[str]]:
     """Retorna (erros, avisos). Erros impedem gerar a URL."""
     errors: list[str] = []
     warnings: list[str] = []
+    L = lang_of(doc)
+
+    def m(key: str, **kw) -> str:
+        return msg(L, key, **kw)
 
     if not isinstance(doc, dict):
-        return ["documento precisa ser um objeto/mapa"], []
+        return [m("not_object")], []
 
     # 1. estrutura via JSON Schema (se disponível)
     try:
@@ -115,83 +138,84 @@ def validate(doc) -> tuple[list[str], list[str]]:
         schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
         validator = jsonschema.Draft202012Validator(schema)
         for e in sorted(validator.iter_errors(doc), key=lambda e: list(e.path)):
-            loc = "/".join(str(p) for p in e.path) or "(raiz)"
+            loc = "/".join(str(p) for p in e.path) or m("root")
             errors.append(f"{loc}: {e.message}")
         if errors:
             return errors, warnings  # checagens semânticas assumem estrutura válida
     except ImportError:
-        warnings.append("jsonschema não instalado: validação estrutural reduzida")
+        warnings.append(m("no_jsonschema"))
 
     # 2. checagens estruturais mínimas (sempre) + semânticas
     if doc.get("version") != VERSION:
-        errors.append(f"version: esperado {VERSION}")
+        errors.append(m("version", v=VERSION))
     kind = doc.get("kind", "plan")
     if kind not in KINDS:
-        errors.append(f"kind: inválido '{kind}' (use plan ou system)")
+        errors.append(m("kind", kind=kind))
     if not title_of(doc).strip():
-        errors.append("title: obrigatório (ou plan, em kind: plan)")
+        errors.append(m("title"))
+    if "lang" in doc and doc["lang"] not in LANGS:
+        errors.append(m("lang", lang=doc["lang"], opts=", ".join(LANGS)))
     is_system = kind == "system"
     note = doc.get("notation", DEFAULT_NOTATION)
     if note not in presets()["notations"]:
-        errors.append(f"notation: '{note}' não existe (use {', '.join(presets()['notations'])})")
+        errors.append(m("notation", note=note, opts=", ".join(presets()["notations"])))
     notation = load_notation(doc)
     types = notation["types"]
     for t in doc.get("types") or []:
         tid = t.get("id")
         for par in t.get("parents") or []:
             if par not in (None, "*") and par not in types:
-                errors.append(f"types({tid}): parents '{par}' não é um tipo")
+                errors.append(m("type_parent", tid=tid, par=par))
         if t.get("icon") and t["icon"] not in presets()["icons"]:
-            warnings.append(f"types({tid}): ícone '{t['icon']}' não existe; o viewer usa square (veja icons em notations.json)")
+            warnings.append(m("type_icon", tid=tid, icon=t["icon"]))
         color = t.get("color")
         if color and color not in presets()["colors"] and not re.match(r"^#[0-9a-fA-F]{6}$", color):
-            errors.append(f"types({tid}): color '{color}' inválida (nome de notations.json ou #RRGGBB)")
+            errors.append(m("type_color", tid=tid, color=color))
     if is_system:
         if doc.get("steps"):
-            warnings.append("steps: só fazem sentido em kind: plan; remova (a ordem de execução vai em flows)")
+            warnings.append(m("sys_steps"))
         if "approved" in doc:
-            warnings.append("approved: só faz sentido em kind: plan; remova")
+            warnings.append(m("sys_approved"))
         if "plan" in doc and "title" not in doc:
-            warnings.append("plan: em kind: system use title")
+            warnings.append(m("sys_plan"))
 
     elements: dict[str, dict] = {}
     parent_of: dict[str, str | None] = {}
 
     def walk(items, parent: dict | None, path: str):
         if not isinstance(items, list):
-            errors.append(f"{path}: precisa ser uma lista")
+            errors.append(m("must_list", p=path))
             return
         for i, el in enumerate(items):
             p = f"{path}[{i}]"
             if not isinstance(el, dict):
-                errors.append(f"{p}: precisa ser um objeto")
+                errors.append(m("must_object", p=p))
                 continue
             eid, etype = el.get("id"), el.get("type")
             p = f"{p}({eid})"
             if not isinstance(eid, str) or not ID_RE.match(eid):
-                errors.append(f"{p}: id inválido (use kebab-case)")
+                errors.append(m("bad_id", p=p))
                 continue
             if eid in elements:
-                errors.append(f"{p}: id duplicado")
+                errors.append(m("dup_id", p=p))
                 continue
             if etype not in types:
-                errors.append(f"{p}: type '{etype}' não existe na notação {notation['name']} "
-                              f"(use {', '.join(types)} ou declare em types)")
+                errors.append(m("bad_type", p=p, etype=etype, notation=notation["name"], opts=", ".join(types)))
             if not el.get("name"):
-                errors.append(f"{p}: name obrigatório")
+                errors.append(m("no_name", p=p))
             if el.get("status", "unchanged") not in STATUSES:
-                errors.append(f"{p}: status inválido '{el.get('status')}'")
+                errors.append(m("bad_status", p=p, status=el.get("status")))
             if is_system and el.get("status", "unchanged") != "unchanged":
-                warnings.append(f"{p}: status '{el['status']}' em kind: system; a documentação mostra o sistema como é hoje")
+                warnings.append(m("sys_status", p=p, status=el["status"]))
             if "detail" in el:
-                warnings.append(f"{p}: 'detail' não é mais usado; remova (as constraints dizem o que a IA deve seguir)")
+                warnings.append(m("old_detail", p=p))
 
             ptype = parent.get("type") if parent else None
             allowed = types[etype]["parents"] if etype in types else {"*"}
             if "*" not in allowed and ptype not in allowed:
-                where = f"dentro de '{ptype}'" if ptype else "na raiz"
-                ok = ", ".join(sorted("raiz" if a is None else a for a in allowed))
-                errors.append(f"{p}: '{etype}' não pode ficar {where} (permitido: {ok})")
+                where = m("inside", ptype=ptype) if ptype else m("at_root")
+                ok = ", ".join(sorted(m("root_word") if a is None else a for a in allowed))
+                errors.append(m("bad_parent", p=p, etype=etype, where=where, ok=ok))
 
             elements[eid] = el
             parent_of[eid] = parent["id"] if parent else None
@@ -211,25 +235,25 @@ def validate(doc) -> tuple[list[str], list[str]]:
     for i, r in enumerate(doc.get("relations", []) or []):
         p = f"relations[{i}]"
         if not isinstance(r, dict):
-            errors.append(f"{p}: precisa ser um objeto")
+            errors.append(m("must_object", p=p))
             continue
         f, t = r.get("from"), r.get("to")
         p = f"{p}({f} -> {t})"
         for side, ref in (("from", f), ("to", t)):
             if ref not in elements:
-                errors.append(f"{p}: {side} '{ref}' não existe")
+                errors.append(m("rel_missing", p=p, side=side, ref=ref))
         if f in elements and t in elements:
             if f == t:
-                errors.append(f"{p}: relação de um elemento com ele mesmo")
+                errors.append(m("rel_self", p=p))
             elif f in ancestors(t) or t in ancestors(f):
-                errors.append(f"{p}: relação entre pai e filho não faz sentido (o filho já está dentro do pai)")
+                errors.append(m("rel_parent", p=p))
         if r.get("status", "unchanged") not in STATUSES:
-            errors.append(f"{p}: status inválido '{r.get('status')}'")
+            errors.append(m("bad_status", p=p, status=r.get("status")))
         elif is_system and r.get("status", "unchanged") != "unchanged":
-            warnings.append(f"{p}: status '{r['status']}' em kind: system")
+            warnings.append(m("rel_sys_status", p=p, status=r["status"]))
         key = (f, t, r.get("label"))
         if key in seen_rel:
-            warnings.append(f"{p}: relação duplicada")
+            warnings.append(m("rel_dup", p=p))
         seen_rel.add(key)
 
     touched: set[str] = set()
@@ -237,19 +261,19 @@ def validate(doc) -> tuple[list[str], list[str]]:
     for i, s in enumerate(doc.get("steps", []) or []):
         p = f"steps[{i}]"
         if not isinstance(s, dict):
-            errors.append(f"{p}: precisa ser um objeto")
+            errors.append(m("must_object", p=p))
             continue
         sid = s.get("id")
         p = f"{p}({sid})"
         if sid in step_ids:
-            errors.append(f"{p}: id de step duplicado")
+            errors.append(m("step_dup", p=p))
         step_ids.add(sid)
         touches = s.get("touches") or []
         if not touches:
-            errors.append(f"{p}: touches vazio")
+            errors.append(m("step_empty", p=p))
         for ref in touches:
             if ref not in elements:
-                errors.append(f"{p}: touches '{ref}' não existe")
+                errors.append(m("step_missing", p=p, ref=ref))
             touched.add(ref)
 
     # fluxos: cada salto segue uma relação que existe (ida, ou volta para uma resposta)
@@ -258,31 +282,31 @@ def validate(doc) -> tuple[list[str], list[str]]:
     for i, fl in enumerate(doc.get("flows", []) or []):
         p = f"flows[{i}]"
         if not isinstance(fl, dict):
-            errors.append(f"{p}: precisa ser um objeto")
+            errors.append(m("must_object", p=p))
             continue
         fid = fl.get("id")
         p = f"{p}({fid})"
         if fid in flow_ids:
-            errors.append(f"{p}: id de flow duplicado")
+            errors.append(m("flow_dup", p=p))
         flow_ids.add(fid)
         if not fl.get("title"):
-            errors.append(f"{p}: title obrigatório")
+            errors.append(m("flow_title", p=p))
         hops = fl.get("hops") or []
         if not hops:
-            errors.append(f"{p}: hops vazio")
+            errors.append(m("flow_empty", p=p))
         for j, h in enumerate(hops):
             hp = f"{p}.hops[{j}]"
             a, b = (h or {}).get("from"), (h or {}).get("to")
             missing = [x for x in (a, b) if x not in elements]
             if missing:
-                errors.extend(f"{hp}: '{x}' não existe" for x in missing)
+                errors.extend(m("hop_missing", p=hp, ref=x) for x in missing)
             elif (a, b) not in rel_pairs and (b, a) not in rel_pairs:
-                errors.append(f"{hp}: {a} → {b} não segue nenhuma relação; crie a relação ou use elementos que já se relacionam")
+                errors.append(m("hop_norel", p=hp, a=a, b=b))
 
     # avisos que ajudam a IA a gerar um documento útil para revisão
     has_steps = bool(doc.get("steps")) and not is_system
     if is_system and not doc.get("flows"):
-        warnings.append("flows: documente pelo menos o caminho principal; é por ele que quem chega entende o sistema")
+        warnings.append(m("sys_flows"))
     for eid, el in elements.items():
         st = el.get("status", "unchanged")
         if st in ("new", "changed"):
@@ -293,12 +317,12 @@ def validate(doc) -> tuple[list[str], list[str]]:
                 p = parent_of.get(p)
             covered = eid in touched or any(c in touched for c in _descendants(el)) or any(a in touched for a in anc)
             if has_steps and not covered:
-                warnings.append(f"{eid}: status '{st}' mas nenhum step toca este elemento")
+                warnings.append(m("no_step", eid=eid, status=st))
             # tudo que muda precisa poder ser aberto até o código
             et = el.get("type")
             if types.get(et, {}).get("openable") and not el.get("children"):
                 below = [k for k, t in types.items() if et in t["parents"]]
-                warnings.append(f"{eid}: status '{st}' sem children — o humano não consegue abrir; detalhe com '{'/'.join(below)}'")
+                warnings.append(m("no_children", eid=eid, status=st, below="/".join(below)))
 
     return errors, warnings
 
@@ -341,15 +365,13 @@ def decode_payload(s: str) -> dict:
 
 # ---------------------------------------------------------------------- brief
 
-STATUS_PT = {"new": "novo", "changed": "alterado", "removed": "removido", "unchanged": "inalterado"}
-
-
 def brief(doc: dict, url: str | None = None) -> str:
     """Markdown de execução: o que a IA deve seguir em cada passo do plano.
     Em kind: system, a documentação do sistema em texto (elementos, relações, fluxos)."""
     if doc.get("kind") == "system":
         return system_doc(doc, url)
     notation = load_notation(doc)
+    L = lang_of(doc)
     index: dict[str, dict] = {}
 
     def walk(items):
@@ -360,31 +382,25 @@ def brief(doc: dict, url: str | None = None) -> str:
     walk(doc.get("elements"))
     name = lambda i: index[i]["name"] if i in index else i  # noqa: E731
 
-    out = [f"# {'Arquitetura do plano' if notation['name'] == 'c4' else 'Plano'}: {title_of(doc)}", ""]
-    if doc.get("approved"):
-        out.append("> ✅ Estrutura **aprovada** pelo humano.")
-    else:
-        out.append("> ⚠️ Estrutura **NÃO aprovada**. Não execute: peça a aprovação no chat primeiro.")
+    out = [f"# {msg(L, 'h_plan_c4' if notation['name'] == 'c4' else 'h_plan')}: {title_of(doc)}", ""]
+    out.append(msg(L, "approved" if doc.get("approved") else "not_approved"))
     if url:
-        out += ["", f"Diagrama: {url}"]
+        out += ["", msg(L, "diagram", url=url)]
     if doc.get("description"):
         out += ["", doc["description"].strip()]
-    out += ["", "## Regras", "",
-            "- Restrições são obrigatórias. Se a implementação exigir quebrar uma, PARE e pergunte.",
-            "- Contratos referenciados (`contract`) não mudam sem perguntar.",
-            "- Fora das restrições, prefira o mais simples e siga o padrão do código existente.",
-            "- Notas do revisor são instruções do humano e têm prioridade."]
+    out += ["", msg(L, "rules"), ""] + [msg(L, f"rule{i}") for i in range(1, 5)]
+    status = lambda s: msg(L, f"status.{s}")  # noqa: E731
 
     def element_block(el: dict) -> list[str]:
         st = el.get("status", "unchanged")
         tech = f", {el['tech']}" if el.get("tech") else ""
-        lines = [f"- **{el['name']}** (`{el['id']}` · {type_label(notation, el['type'])}{tech} · {STATUS_PT[st]})"]
+        lines = [f"- **{el['name']}** (`{el['id']}` · {type_label(notation, el['type'])}{tech} · {status(st)})"]
         if el.get("path"):
-            lines.append(f"  - Arquivo: `{el['path']}`")
+            lines.append(f"  - {msg(L, 'file')}: `{el['path']}`")
         for c in el.get("constraints") or []:
-            lines.append(f"  - Restrição: {c}")
+            lines.append(f"  - {msg(L, 'constraint')}: {c}")
         if el.get("notes"):
-            lines.append(f"  - Nota do revisor: {el['notes'].strip()}")
+            lines.append(f"  - {msg(L, 'reviewer_note')}: {el['notes'].strip()}")
         return lines
 
     def rel_line(r: dict) -> str:
@@ -395,14 +411,14 @@ def brief(doc: dict, url: str | None = None) -> str:
             bits.append(r["protocol"])
         s = " · ".join(bits)
         if r.get("status", "unchanged") != "unchanged":
-            s += f" ({STATUS_PT[r['status']]})"
+            s += f" ({status(r['status'])})"
         if r.get("contract"):
-            s += f" — contrato: `{r['contract']}`"
+            s += f" — {msg(L, 'contract')}: `{r['contract']}`"
         return f"- {s}"
 
     steps = doc.get("steps") or []
     if steps:
-        out += ["", "## Passos", ""]
+        out += ["", msg(L, "steps"), ""]
     for i, s in enumerate(steps, 1):
         ids = set()
         for t in s["touches"]:
@@ -417,10 +433,10 @@ def brief(doc: dict, url: str | None = None) -> str:
                 out += element_block(index[t])
         rels = [r for r in doc.get("relations") or [] if r["from"] in ids or r["to"] in ids]
         if rels:
-            out += ["", "Relações envolvidas:"] + [rel_line(r) for r in rels]
+            out += ["", msg(L, "rels_involved")] + [rel_line(r) for r in rels]
         out.append("")
 
-    out += flow_lines(doc, name, "## Fluxos (como funciona depois do plano)")
+    out += flow_lines(doc, name, msg(L, "flows_plan"))
 
     touched = {t for s in steps for t in s["touches"]}
     loose = [el for el in index.values()
@@ -428,7 +444,7 @@ def brief(doc: dict, url: str | None = None) -> str:
              and not notation["types"].get(el["type"], {}).get("context")
              and not any(d in touched for d in _descendants(el))]
     if loose:
-        out += ["## Mudanças sem passo associado", ""]
+        out += [msg(L, "loose"), ""]
         for el in loose:
             out += element_block(el)
         out.append("")
@@ -453,13 +469,14 @@ def flow_lines(doc: dict, name, heading: str) -> list[str]:
 def system_doc(doc: dict, url: str | None = None) -> str:
     """Documentação do sistema como é hoje: árvore de elementos, relações e fluxos."""
     notation = load_notation(doc)
+    L = lang_of(doc)
     index: dict[str, dict] = {}
-    out = [f"# {'Arquitetura' if notation['name'] == 'c4' else 'Diagrama'}: {title_of(doc)}", ""]
+    out = [f"# {msg(L, 'h_sys_c4' if notation['name'] == 'c4' else 'h_sys')}: {title_of(doc)}", ""]
     if url:
-        out += [f"Diagrama: {url}", ""]
+        out += [msg(L, "diagram", url=url), ""]
     if doc.get("description"):
         out += [doc["description"].strip(), ""]
-    out += ["## Elementos", ""]
+    out += [msg(L, "elements"), ""]
 
     def walk(items, depth: int):
         for el in items or []:
@@ -470,20 +487,20 @@ def system_doc(doc: dict, url: str | None = None) -> str:
                 line += f": {el['description'].strip()}"
             out.append(line)
             if el.get("path"):
-                out.append(f"{'  ' * (depth + 1)}- Arquivo: `{el['path']}`")
+                out.append(f"{'  ' * (depth + 1)}- {msg(L, 'file')}: `{el['path']}`")
             for c in el.get("constraints") or []:
-                out.append(f"{'  ' * (depth + 1)}- Regra: {c}")
+                out.append(f"{'  ' * (depth + 1)}- {msg(L, 'rule')}: {c}")
             walk(el.get("children"), depth + 1)
 
     walk(doc.get("elements"), 0)
     name = lambda i: index[i]["name"] if i in index else i  # noqa: E731
     rels = doc.get("relations") or []
     if rels:
-        out += ["", "## Relações", ""]
+        out += ["", msg(L, "relations"), ""]
         for r in rels:
             bits = [f"{name(r['from'])} → {name(r['to'])}"] + [r[k] for k in ("label", "protocol") if r.get(k)]
-            out.append("- " + " · ".join(bits) + (f" — contrato: `{r['contract']}`" if r.get("contract") else ""))
-    out += [""] + flow_lines(doc, name, "## Fluxos")
+            out.append("- " + " · ".join(bits) + (f" — {msg(L, 'contract')}: `{r['contract']}`" if r.get("contract") else ""))
+    out += [""] + flow_lines(doc, name, msg(L, "flows"))
     return "\n".join(out).rstrip() + "\n"
 
 
@@ -510,11 +527,11 @@ def local_base() -> str:
 
 # ------------------------------------------------------------------------ cli
 
-def report(errors: list[str], warnings: list[str]) -> None:
+def report(errors: list[str], warnings: list[str], lang: str = DEFAULT_LANG) -> None:
     for w in warnings:
-        print(f"aviso: {w}", file=sys.stderr)
+        print(f"{msg(lang, 'warn')}: {w}", file=sys.stderr)
     for e in errors:
-        print(f"erro:  {e}", file=sys.stderr)
+        print(f"{msg(lang, 'error')}:  {e}", file=sys.stderr)
 
 
 def main() -> None:
@@ -543,40 +560,43 @@ def main() -> None:
     if a.cmd == "brief":
         is_file = not looks_like_link(a.source)
         doc = load(a.source) if is_file else decode_payload(a.source)
+        L = lang_of(doc)
         errors, warnings = validate(doc)
-        report(errors, warnings)
+        report(errors, warnings, L)
         if errors:
             sys.exit(1)
         md = brief(doc, None if is_file else a.source.strip())
         if a.output:
             Path(a.output).write_text(md, encoding="utf-8")
-            print(f"escrito em {a.output}", file=sys.stderr)
+            print(msg(L, "written", path=a.output), file=sys.stderr)
         else:
             sys.stdout.write(md)
         return
 
     if a.cmd in ("validate", "encode"):
         doc = load(a.file)
+        L = lang_of(doc)
         errors, warnings = validate(doc)
-        report(errors, warnings)
+        report(errors, warnings, L)
         if errors:
-            print(f"\n{len(errors)} erro(s). Corrija antes de gerar a URL.", file=sys.stderr)
+            print("\n" + msg(L, "n_errors", n=len(errors)), file=sys.stderr)
             sys.exit(1)
         if a.cmd == "validate":
-            print(f"ok ({len(warnings)} aviso(s))")
+            print(msg(L, "ok", n=len(warnings)))
             return
         url = (a.base or (local_base() if a.local else default_base())) + "#" + encode_payload(doc)
         print(url)
-        print(f"({len(url)} caracteres)", file=sys.stderr)
+        print(msg(L, "chars", n=len(url)), file=sys.stderr)
         return
 
     doc = decode_payload(a.url)
+    L = lang_of(doc)
     errors, warnings = validate(doc)
-    report(errors, warnings)
+    report(errors, warnings, L)
     out = json.dumps(doc, ensure_ascii=False, indent=2) + "\n" if a.json else dump_yaml(doc)
     if a.output:
         Path(a.output).write_text(out, encoding="utf-8")
-        print(f"escrito em {a.output}", file=sys.stderr)
+        print(msg(L, "written", path=a.output), file=sys.stderr)
     else:
         sys.stdout.write(out)
     if errors:

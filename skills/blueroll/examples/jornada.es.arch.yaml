@@ -1,0 +1,140 @@
+# yaml-language-server: $schema=../schema/arch.v1.json
+# Ejemplo de notation: jornada (recorrido). El camino de un usuario hasta usar una función, con los puntos de salida.
+# Mismos ids que jornada.arch.yaml (pt-BR) y jornada.en.arch.yaml.
+version: 1
+kind: system
+lang: es
+notation: jornada
+title: Del "tengo hambre" al repartidor en el mapa
+description: >
+  El recorrido de quien pide comida en una app de delivery, de la pantalla de inicio a la
+  función de seguir al repartidor en el mapa, con los puntos donde la gente abandona.
+  Los números son de ejemplo.
+
+elements:
+  - id: cliente
+    type: persona
+    name: Cliente con hambre
+    description: Quiere cenar sin salir de casa y saber cuándo llega la comida
+
+  - id: push
+    type: canal
+    name: Notificación push
+    description: '"Tu pedido va en camino"'
+
+  - id: escolha
+    type: fase
+    name: Elección
+    description: De la pantalla de inicio al restaurante elegido
+    children:
+      - id: inicio
+        type: tela
+        name: Pantalla de inicio
+        description: Restaurantes cercanos, promociones y categorías
+      - id: busca
+        type: acao
+        name: Busca "pizza"
+      - id: restaurante
+        type: tela
+        name: Página del restaurante
+        description: Menú, costo de envío y tiempo estimado
+      - id: vale-a-pena
+        type: decisao
+        name: ¿Valen la pena el costo y el tiempo?
+        description: 6 de cada 10 personas miran más de un restaurante antes de decidir
+      - id: fecha-app
+        type: saida
+        name: Cierra la app
+        description: Un costo de envío alto es el motivo principal
+
+  - id: pedido
+    type: fase
+    name: Pedido
+    description: Del carrito al pago aprobado
+    children:
+      - id: carrinho
+        type: tela
+        name: Carrito
+        description: Productos, notas y cupón
+      - id: pagamento
+        type: tela
+        name: Pago
+        description: Tarjeta guardada, billetera digital o efectivo
+      - id: aprovado
+        type: decisao
+        name: ¿Pago aprobado?
+      - id: troca-cartao
+        type: tela
+        name: Cambiar forma de pago
+        description: Sugiere una billetera digital cuando la tarjeta es rechazada
+      - id: desiste
+        type: saida
+        name: Abandona el pedido
+        description: Tarjeta rechazada dos veces
+
+  - id: entrega
+    type: fase
+    name: Entrega
+    description: Del pedido confirmado a la comida en la puerta
+    children:
+      - id: confirmado
+        type: tela
+        name: Pedido confirmado
+        description: Muestra al restaurante preparándolo y el tiempo estimado
+      - id: mapa
+        type: objetivo
+        name: Sigue al repartidor en el mapa
+        description: Quien sigue el pedido en el mapa llama 70% menos a soporte
+      - id: recebe
+        type: acao
+        name: Recibe y califica
+        description: Calificación para el restaurante y para el repartidor
+
+relations:
+  - { from: cliente, to: inicio, label: abre la app }
+  - { from: inicio, to: busca }
+  - { from: busca, to: restaurante, label: toca el primer resultado }
+  - { from: restaurante, to: vale-a-pena }
+  - { from: vale-a-pena, to: inicio, label: "no: vuelve y mira otro" }
+  - { from: vale-a-pena, to: fecha-app, label: "no: abandona" }
+  - { from: vale-a-pena, to: carrinho, label: "sí: agrega los productos" }
+  - { from: carrinho, to: pagamento, label: Hacer pedido }
+  - { from: pagamento, to: aprovado }
+  - { from: aprovado, to: troca-cartao, label: rechazado }
+  - { from: troca-cartao, to: pagamento, label: prueba con billetera digital }
+  - { from: troca-cartao, to: desiste, label: rechazado otra vez }
+  - { from: aprovado, to: confirmado, label: aprobado }
+  - { from: confirmado, to: mapa, label: 'botón "Seguir"' }
+  - { from: push, to: mapa, label: abre directo en el mapa }
+  - { from: mapa, to: recebe, label: llegó el repartidor }
+
+flows:
+  - id: caminho-feliz
+    title: De abrir la app al repartidor en el mapa
+    description: El camino más común, 6 minutos en promedio hasta pagar
+    hops:
+      - { from: cliente, to: inicio }
+      - { from: inicio, to: busca }
+      - { from: busca, to: restaurante }
+      - { from: restaurante, to: vale-a-pena, label: mira el costo y el tiempo }
+      - { from: vale-a-pena, to: carrinho }
+      - { from: carrinho, to: pagamento }
+      - { from: pagamento, to: aprovado, label: paga con la tarjeta guardada }
+      - { from: aprovado, to: confirmado }
+      - { from: confirmado, to: mapa, label: sigue al repartidor }
+      - { from: mapa, to: recebe }
+  - id: cartao-recusado
+    title: Tarjeta rechazada
+    description: Donde más se pierden pedidos ya decididos, y cómo se salvan algunos
+    hops:
+      - { from: pagamento, to: aprovado }
+      - { from: aprovado, to: troca-cartao, label: el banco rechaza la tarjeta }
+      - { from: troca-cartao, to: pagamento, label: elige billetera digital }
+      - { from: pagamento, to: aprovado, label: la billetera aprueba al instante }
+      - { from: aprovado, to: confirmado }
+  - id: volta-pelo-push
+    title: Vuelve por la notificación
+    description: Quien cerró la app llega a la función por el push
+    hops:
+      - { from: push, to: mapa, label: toca "Tu pedido va en camino" }
+      - { from: mapa, to: recebe }

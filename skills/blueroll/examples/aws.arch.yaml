@@ -2,6 +2,7 @@
 # Exemplo de notation: infra, informativo (kind: system), com dois tipos próprios (papel IAM e monitoramento).
 version: 1
 kind: system
+lang: pt-BR
 notation: infra
 title: Entidades da AWS e seus papéis
 description: >

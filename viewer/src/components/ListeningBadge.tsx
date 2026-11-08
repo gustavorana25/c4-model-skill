@@ -1,3 +1,4 @@
+import { useT } from "../i18n";
 import { useStore } from "../store";
 import { cn } from "./ui";
 
@@ -5,15 +6,12 @@ import { cn } from "./ui";
 export function ListeningBadge() {
   const listening = useStore((s) => s.listening);
   const ever = useStore((s) => s.everListened);
+  const t = useT();
   if (!listening && !ever) return null;
   return (
     <span
       role="status"
-      title={
-        listening
-          ? "Comentários feitos aqui (tecla C) chegam à IA agora, e ela responde no chat. A escuta continua enquanto você mexer na página."
-          : "A IA parou de escutar esta página. Volte ao chat e diga “pronto”, ou peça para ela escutar de novo."
-      }
+      title={listening ? t("listening.onTitle") : t("listening.offTitle")}
       className={cn(
         "inline-flex items-center gap-2 whitespace-nowrap rounded-full px-2.5 py-1 text-[12px] font-semibold",
         listening ? "bg-[rgba(70,196,106,.12)] text-st-new-ink" : "bg-chip text-muted",
@@ -23,7 +21,7 @@ export function ListeningBadge() {
         {listening && <span className="absolute inline-flex size-full animate-ping rounded-full bg-st-new opacity-60" />}
         <span className={cn("relative inline-flex size-2 rounded-full", listening ? "bg-st-new" : "bg-subtle")} />
       </span>
-      {listening ? "IA escutando" : "IA não está escutando"}
+      {listening ? t("listening.on") : t("listening.off")}
     </span>
   );
 }

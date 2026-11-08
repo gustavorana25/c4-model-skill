@@ -12,15 +12,16 @@ The same skill also documents an existing system, for onboarding or for getting 
 
 ![Plan overview: what is new, changed and removed](docs/prints/visao-geral.jpg)
 
-**See an example:** open https://gustavorana25.github.io/c4-model-skill/ and pick one of the examples (PIX in C4, AWS entities, user journey).
+**See an example:** open https://gustavorana25.github.io/c4-model-skill/ and pick one of the examples (two-factor login in C4, AWS building blocks, a delivery app journey). They open in the language of the interface.
 
 ## What you get
 
 - **A diagram that goes from context down to code.** Systems, containers, components and files, with what is new, changed and removed in color. Everything starts collapsed at the context level, and you open only what you want to see.
-- **Hop-by-hop flows.** How the system works after the plan ("Customer pays with PIX", "QR Code expires"). You step through with ← → and the diagram drills down to the level of each hop.
+- **Hop-by-hop flows.** How the system works after the plan ("Login with the authenticator app", "Too many wrong codes"). You step through with ← → and the diagram drills down to the level of each hop.
 - **Plan steps linked to the architecture.** Each step shows which elements it creates or changes.
 - **Explicit constraints.** What the implementation must respect ("idempotency by txid", "migration without table lock").
 - **Other notations.** `processo` (lanes, steps, decisions), `infra` (cloud, region, network, cluster), `dominio` (contexts, aggregates, events), `jornada` (user journey to a feature), `livre`, and custom types in the YAML. See section 1b of [`SKILL.md`](skills/blueroll/SKILL.md).
+- **English, Portuguese and Spanish.** The viewer follows your browser's language (with a switcher in the header). The YAML's `lang` field sets the language of the brief and the validation messages.
 - **A brief for execution.** After you approve, the AI generates a Markdown file with the structure and constraints and follows it while implementing.
 
 ![A flow opened hop by hop, drilling down to code](docs/prints/fluxo.jpg)

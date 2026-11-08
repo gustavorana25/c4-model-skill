@@ -102,9 +102,31 @@ check("plan continua aceitando title no lugar de plan",
 py_fixture = ROOT / "viewer" / "src" / "lib" / "__fixtures__" / "pix.python.hash.txt"
 check("hash do PIX igual ao de antes das notações (links antigos)",
       A.encode_payload(doc) == py_fixture.read_text(encoding="utf-8").strip())
-for name in ("aws", "jornada"):
-    ex = yaml.safe_load((SKILL / "examples" / f"{name}.arch.yaml").read_text(encoding="utf-8"))
-    check(f"exemplo {name} válido e sem avisos", A.validate(ex) == ([], []))
+for path in sorted((SKILL / "examples").glob("*.arch.yaml")):
+    ex = yaml.safe_load(path.read_text(encoding="utf-8"))
+    check(f"exemplo {path.name} válido e sem avisos", A.validate(ex) == ([], []))
+
+
+def shape(d):
+    """O que precisa ser igual entre as traduções de um exemplo: ids, tipos, status, relações, passos e saltos."""
+    els = []
+
+    def walk(items):
+        for el in items or []:
+            els.append((el["id"], el["type"], el.get("status")))
+            walk(el.get("children"))
+    walk(d["elements"])
+    return (els, [(r["from"], r["to"], r.get("status")) for r in d.get("relations") or []],
+            [(s["id"], tuple(s["touches"])) for s in d.get("steps") or []],
+            [(f["id"], [(h["from"], h["to"]) for h in f["hops"]]) for f in d.get("flows") or []],
+            d.get("kind"), d.get("notation"), [t["id"] for t in d.get("types") or []])
+
+
+for name in ("2fa", "aws", "jornada"):
+    versions = {lg: yaml.safe_load((SKILL / "examples" / f"{name}{suffix}.arch.yaml").read_text(encoding="utf-8"))
+                for lg, suffix in (("pt-BR", ""), ("en", ".en"), ("es", ".es"))}
+    check(f"exemplo {name}: lang de cada tradução", all(d.get("lang") == lg for lg, d in versions.items()))
+    check(f"exemplo {name}: traduções com a mesma estrutura", shape(versions["en"]) == shape(versions["pt-BR"]) == shape(versions["es"]))
 check("notation inexistente é erro", any("notation" in e for e in A.validate({**doc, "notation": "nada"})[0]))
 check("tipo de outra notação é erro", any("não existe na notação processo" in e for e in A.validate({**doc, "notation": "processo"})[0]))
 proc = {"version": 1, "kind": "system", "notation": "processo", "title": "P",
@@ -127,6 +149,27 @@ check("brief de plano em outra notação", A.validate(infra) == ([], []) and A.b
       and "(`db-replica` · banco, PostgreSQL 16 · novo)" in A.brief(infra))
 aws = yaml.safe_load((SKILL / "examples" / "aws.arch.yaml").read_text(encoding="utf-8"))
 check("documentação usa o rótulo do tipo próprio", "**Papel da API** (papel iam)" in A.brief(aws) and A.brief(aws).startswith("# Diagrama: "))
+# idioma (lang)
+check("sem lang continua em pt-BR", A.brief(doc).startswith("# Arquitetura do plano:") and "## Regras" in A.brief(doc))
+en_doc = {**doc, "lang": "en"}
+check("lang en: validação sem erros", A.validate(en_doc) == ([], []))
+md_en = A.brief(en_doc)
+check("lang en: brief em inglês", md_en.startswith("# Plan architecture:") and "## Rules" in md_en and "## Steps" in md_en
+      and "## Regras" not in md_en)
+check("lang en: rótulo do tipo traduzido", "· container" in md_en and "(`pix-handler` · component" in md_en)
+check("lang en: status traduzido", "· new)" in md_en or "· changed)" in md_en)
+check("lang es: mensagens de validação em espanhol", any("no existe" in e for e in A.validate(
+    {**doc, "lang": "es", "relations": doc["relations"] + [{"from": "pix-handler", "to": "fantasma"}]})[0]))
+check("lang inválido é erro", any(e.startswith("lang:") for e in A.validate({**doc, "lang": "fr"})[0]))
+check("lang en: tipo próprio fica como está", "(papel iam)" in A.brief({**aws, "lang": "en"})
+      and A.brief({**aws, "lang": "en"}).startswith("# Diagram: "))
+check("lang não muda o hash sem lang", A.encode_payload(doc) == py_fixture.read_text(encoding="utf-8").strip())
+_i18n = __import__("json").loads((SKILL / "schema" / "notations.i18n.json").read_text(encoding="utf-8"))
+check("toda notação tem tradução en e es", all(
+    set(_i18n[lg]) == set(A.presets()["notations"]) for lg in ("en", "es")))
+M = __import__("messages").MESSAGES
+check("mensagens com as mesmas chaves nos 3 idiomas", set(M["en"]) == set(M["pt-BR"]) == set(M["es"]))
+
 _b = os.environ.pop("BLUEROLL_VIEWER_URL", None)
 os.environ["BLUEROLL_VIEWER_URL"] = "https://b.host/"
 check("BLUEROLL_VIEWER_URL tem prioridade", A.default_base() == "https://b.host/")

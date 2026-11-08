@@ -4,6 +4,7 @@ import type { View, ViewEdge } from "./view";
 import type { ArchElement } from "./types";
 import { hasChildren } from "./model";
 import { STATUS_META } from "./meta";
+import { t } from "../i18n";
 
 export const NODE_W = 228;
 
@@ -48,7 +49,7 @@ export function nodeHeight(el: ArchElement): number {
 }
 
 export function edgeText(e: ViewEdge): [string, string] {
-  if (e.rels.length > 1) return [`${e.rels.length} relações`, ""];
+  if (e.rels.length > 1) return [t("canvas.relations", e.rels.length), ""];
   const r = e.rels[0];
   return [r.label ?? "", r.protocol ?? ""];
 }

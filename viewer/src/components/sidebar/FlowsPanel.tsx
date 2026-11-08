@@ -2,6 +2,7 @@ import { Route } from "lucide-react";
 import { hopLabel, hopRelation } from "../../lib/flow";
 import { isSystemDoc, statusOf } from "../../lib/model";
 import { STATUS_META } from "../../lib/meta";
+import { useT } from "../../i18n";
 import { useStore } from "../../store";
 import { cn } from "../ui";
 
@@ -14,19 +15,20 @@ export function FlowsPanel() {
   const setHop = useStore((s) => s.setHop);
   const follow = useStore((s) => s.followFlow);
   const toggleFollow = useStore((s) => s.toggleFollowFlow);
+  const t = useT();
   const flows = doc.flows ?? [];
   const name = (id: string) => model.index.get(id)?.name ?? id;
 
-  if (!flows.length) return <p className="p-5 text-[13px] text-subtle">Nenhum fluxo neste diagrama.</p>;
+  if (!flows.length) return <p className="p-5 text-[13px] text-subtle">{t("flows.none")}</p>;
 
   return (
     <div className="flex flex-col gap-1 px-3 py-4">
       <p className="mx-2 mb-1 text-[13px] text-muted">
-        {isSystemDoc(doc) ? "Como o sistema funciona hoje." : "Como o sistema funciona depois do plano."} Abra um fluxo e avance com ← →.
+        {isSystemDoc(doc) ? t("flows.introSystem") : t("flows.introPlan")} {t("flows.introNav")}
       </p>
       <label className="mx-2 mb-2.5 flex cursor-pointer items-center gap-2 text-[12.5px] text-fg-2">
         <input type="checkbox" checked={follow} onChange={toggleFollow} className="accent-[#4F7DF3]" />
-        Abrir as caixas de cada salto
+        {t("flows.follow")}
       </label>
       {flows.map((f) => {
         const on = flow?.id === f.id;
@@ -45,7 +47,7 @@ export function FlowsPanel() {
               </span>
               <span className="min-w-0 pt-0.5">
                 <span className={cn("block text-[13.5px] leading-snug", on ? "font-semibold text-fg" : "text-fg-2")}>{f.title}</span>
-                <span className="block text-[12px] text-subtle">{f.hops.length} saltos</span>
+                <span className="block text-[12px] text-subtle">{t("flows.hops", f.hops.length)}</span>
               </span>
             </button>
             {on && (
@@ -82,7 +84,7 @@ export function FlowsPanel() {
                             <span className="block text-muted">{hopLabel(doc, h)}</span>
                           </span>
                           {st !== "unchanged" && (
-                            <span className="mt-1.5 size-2 shrink-0 rounded-full" style={{ background: STATUS_META[st].stroke }} title={STATUS_META[st].label} />
+                            <span className="mt-1.5 size-2 shrink-0 rounded-full" style={{ background: STATUS_META[st].stroke }} title={t(`status.${st}`)} />
                           )}
                         </button>
                       </li>

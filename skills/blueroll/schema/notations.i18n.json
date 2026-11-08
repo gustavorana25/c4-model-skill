@@ -1,0 +1,211 @@
+{
+  "$comment": "Traduções dos textos de notations.json (que está em pt-BR). Só os textos: label, description, root, summary (na mesma ordem) e, por tipo, label e inside. O que faltar aqui cai no pt-BR.",
+  "en": {
+    "c4": {
+      "label": "C4",
+      "description": "Software architecture: context, containers, components and code.",
+      "root": "Level 1 · Context",
+      "summary": ["Containers", "Components", "External"],
+      "types": {
+        "person": { "label": "Person" },
+        "system": { "label": "System", "inside": "Level 2 · Containers" },
+        "external": { "label": "External system" },
+        "container": { "label": "Container", "inside": "Level 3 · Components" },
+        "database": { "label": "Database", "inside": "Level 3 · Components" },
+        "queue": { "label": "Queue", "inside": "Level 3 · Components" },
+        "component": { "label": "Component", "inside": "Level 4 · Code" },
+        "code": { "label": "Code" }
+      }
+    },
+    "processo": {
+      "label": "Process",
+      "description": "Process flowchart: lanes, steps, decisions, start and end.",
+      "root": "Process overview",
+      "summary": ["Lanes", "Steps", "Decisions"],
+      "types": {
+        "raia": { "label": "Lane", "inside": "Steps in the lane" },
+        "ator": { "label": "Actor" },
+        "sistema": { "label": "System" },
+        "inicio": { "label": "Start" },
+        "etapa": { "label": "Step" },
+        "decisao": { "label": "Decision" },
+        "espera": { "label": "Wait" },
+        "documento": { "label": "Document" },
+        "fim": { "label": "End" },
+        "subprocesso": { "label": "Subprocess", "inside": "Steps in the subprocess" }
+      }
+    },
+    "infra": {
+      "label": "Infrastructure",
+      "description": "Deployment and infrastructure: cloud, region, network, cluster and the resources inside.",
+      "root": "Infrastructure overview",
+      "summary": ["Services", "Data", "External"],
+      "types": {
+        "usuario": { "label": "User" },
+        "externo": { "label": "External service" },
+        "nuvem": { "label": "Cloud / account", "inside": "Regions and networks" },
+        "regiao": { "label": "Region", "inside": "Networks and resources" },
+        "rede": { "label": "Network", "inside": "Network resources" },
+        "cluster": { "label": "Cluster", "inside": "Cluster services" },
+        "borda": { "label": "Edge / gateway" },
+        "servico": { "label": "Service" },
+        "funcao": { "label": "Function" },
+        "banco": { "label": "Database" },
+        "fila": { "label": "Queue" },
+        "storage": { "label": "Storage" },
+        "segredo": { "label": "Secret" }
+      }
+    },
+    "dominio": {
+      "label": "Domain",
+      "description": "Domain modeling: contexts, aggregates, commands, events and policies.",
+      "root": "Context map",
+      "summary": ["Contexts", "Aggregates", "Events"],
+      "types": {
+        "ator": { "label": "Actor" },
+        "externo": { "label": "External system" },
+        "contexto": { "label": "Context", "inside": "Inside the context" },
+        "agregado": { "label": "Aggregate", "inside": "Inside the aggregate" },
+        "entidade": { "label": "Entity" },
+        "valor": { "label": "Value object" },
+        "comando": { "label": "Command" },
+        "evento": { "label": "Event" },
+        "politica": { "label": "Policy" },
+        "leitura": { "label": "Read model" }
+      }
+    },
+    "jornada": {
+      "label": "Journey",
+      "description": "A user's journey through a product: phases, screens, actions and decisions on the way to a goal.",
+      "root": "Full journey",
+      "summary": ["Phases", "Screens", "Exit points"],
+      "types": {
+        "persona": { "label": "Persona" },
+        "canal": { "label": "Channel" },
+        "fase": { "label": "Phase", "inside": "Steps in the phase" },
+        "tela": { "label": "Screen" },
+        "acao": { "label": "Action" },
+        "decisao": { "label": "Decision" },
+        "saida": { "label": "Exit" },
+        "objetivo": { "label": "Goal" }
+      }
+    },
+    "livre": {
+      "label": "Free-form",
+      "description": "Boxes and arrows with no nesting rules; a base for your own types.",
+      "root": "Overview",
+      "summary": ["Groups", "Items", "External"],
+      "types": {
+        "ator": { "label": "Actor" },
+        "grupo": { "label": "Group" },
+        "item": { "label": "Item" },
+        "dado": { "label": "Data" },
+        "externo": { "label": "External" }
+      }
+    }
+  },
+  "es": {
+    "c4": {
+      "label": "C4",
+      "description": "Arquitectura de software: contexto, contenedores, componentes y código.",
+      "root": "Nivel 1 · Contexto",
+      "summary": ["Contenedores", "Componentes", "Externos"],
+      "types": {
+        "person": { "label": "Persona" },
+        "system": { "label": "Sistema", "inside": "Nivel 2 · Contenedores" },
+        "external": { "label": "Sistema externo" },
+        "container": { "label": "Contenedor", "inside": "Nivel 3 · Componentes" },
+        "database": { "label": "Base de datos", "inside": "Nivel 3 · Componentes" },
+        "queue": { "label": "Cola", "inside": "Nivel 3 · Componentes" },
+        "component": { "label": "Componente", "inside": "Nivel 4 · Código" },
+        "code": { "label": "Código" }
+      }
+    },
+    "processo": {
+      "label": "Proceso",
+      "description": "Diagrama de flujo de un proceso: carriles, etapas, decisiones, inicio y fin.",
+      "root": "Visión general del proceso",
+      "summary": ["Carriles", "Etapas", "Decisiones"],
+      "types": {
+        "raia": { "label": "Carril", "inside": "Etapas del carril" },
+        "ator": { "label": "Actor" },
+        "sistema": { "label": "Sistema" },
+        "inicio": { "label": "Inicio" },
+        "etapa": { "label": "Etapa" },
+        "decisao": { "label": "Decisión" },
+        "espera": { "label": "Espera" },
+        "documento": { "label": "Documento" },
+        "fim": { "label": "Fin" },
+        "subprocesso": { "label": "Subproceso", "inside": "Etapas del subproceso" }
+      }
+    },
+    "infra": {
+      "label": "Infraestructura",
+      "description": "Despliegue e infraestructura: nube, región, red, clúster y los recursos dentro.",
+      "root": "Visión general de la infraestructura",
+      "summary": ["Servicios", "Datos", "Externos"],
+      "types": {
+        "usuario": { "label": "Usuario" },
+        "externo": { "label": "Servicio externo" },
+        "nuvem": { "label": "Nube / cuenta", "inside": "Regiones y redes" },
+        "regiao": { "label": "Región", "inside": "Redes y recursos" },
+        "rede": { "label": "Red", "inside": "Recursos de la red" },
+        "cluster": { "label": "Clúster", "inside": "Servicios del clúster" },
+        "borda": { "label": "Borde / gateway" },
+        "servico": { "label": "Servicio" },
+        "funcao": { "label": "Función" },
+        "banco": { "label": "Base de datos" },
+        "fila": { "label": "Cola" },
+        "storage": { "label": "Almacenamiento" },
+        "segredo": { "label": "Secreto" }
+      }
+    },
+    "dominio": {
+      "label": "Dominio",
+      "description": "Modelado de dominio: contextos, agregados, comandos, eventos y políticas.",
+      "root": "Mapa de contextos",
+      "summary": ["Contextos", "Agregados", "Eventos"],
+      "types": {
+        "ator": { "label": "Actor" },
+        "externo": { "label": "Sistema externo" },
+        "contexto": { "label": "Contexto", "inside": "Dentro del contexto" },
+        "agregado": { "label": "Agregado", "inside": "Dentro del agregado" },
+        "entidade": { "label": "Entidad" },
+        "valor": { "label": "Objeto de valor" },
+        "comando": { "label": "Comando" },
+        "evento": { "label": "Evento" },
+        "politica": { "label": "Política" },
+        "leitura": { "label": "Modelo de lectura" }
+      }
+    },
+    "jornada": {
+      "label": "Recorrido",
+      "description": "Recorrido del usuario en un producto: fases, pantallas, acciones y decisiones hasta un objetivo.",
+      "root": "Recorrido completo",
+      "summary": ["Fases", "Pantallas", "Puntos de salida"],
+      "types": {
+        "persona": { "label": "Persona" },
+        "canal": { "label": "Canal" },
+        "fase": { "label": "Fase", "inside": "Pasos de la fase" },
+        "tela": { "label": "Pantalla" },
+        "acao": { "label": "Acción" },
+        "decisao": { "label": "Decisión" },
+        "saida": { "label": "Salida" },
+        "objetivo": { "label": "Objetivo" }
+      }
+    },
+    "livre": {
+      "label": "Libre",
+      "description": "Cajas y flechas sin reglas de anidamiento; base para tipos propios.",
+      "root": "Visión general",
+      "summary": ["Grupos", "Elementos", "Externos"],
+      "types": {
+        "ator": { "label": "Actor" },
+        "grupo": { "label": "Grupo" },
+        "item": { "label": "Elemento" },
+        "dado": { "label": "Dato" },
+        "externo": { "label": "Externo" }
+      }
+    }
+  }
+}

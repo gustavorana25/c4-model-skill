@@ -38,6 +38,10 @@ O codec existe em dois lugares, [`src/lib/codec.ts`](src/lib/codec.ts) e [`skill
 
 Os tipos de caixa (rótulo, ícone, cor, aninhamento, nome dos níveis) vêm de [`skills/blueroll/schema/notations.json`](../skills/blueroll/schema/notations.json), que o viewer importa no build e o `arch_url.py` lê. [`src/lib/notation.ts`](src/lib/notation.ts) junta o preset de `notation` com os `types` do documento; os componentes só usam `typeMeta()` e `levelLabel()`. Ícone novo entra em `icons` no JSON e no mapa `ICONS` do `notation.ts` (um teste confere que os dois batem).
 
+## Idiomas
+
+A interface tem pt-BR, en e es. Os textos ficam em [`src/i18n/`](src/i18n/): `pt-BR.ts` é a fonte, e `en.ts` e `es.ts` precisam ter as mesmas chaves (o TypeScript e um teste cobram). Componentes usam `useT()`; código fora do React usa `t()`. O idioma vem do `localStorage`, senão do navegador, senão inglês. Os textos das notações traduzidos ficam em [`notations.i18n.json`](../skills/blueroll/schema/notations.i18n.json), ao lado do `notations.json` (que é o pt-BR). O conteúdo do diagrama não é traduzido.
+
 ## Script e testes do Python
 
 Da raiz do repositório:

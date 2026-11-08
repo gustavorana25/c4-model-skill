@@ -1,0 +1,140 @@
+# yaml-language-server: $schema=../schema/arch.v1.json
+# jornada (journey) notation example: a user's path to a feature, with the exit points.
+# Same ids as jornada.arch.yaml (pt-BR) and jornada.es.arch.yaml.
+version: 1
+kind: system
+lang: en
+notation: jornada
+title: From "I'm hungry" to the courier on the map
+description: >
+  The journey of someone ordering food in a delivery app, from the home screen to the
+  feature that tracks the courier on the map, with the points where people give up.
+  The numbers are made up.
+
+elements:
+  - id: cliente
+    type: persona
+    name: Hungry customer
+    description: Wants dinner without leaving home and to know when the food arrives
+
+  - id: push
+    type: canal
+    name: Push notification
+    description: '"Your order is on its way"'
+
+  - id: escolha
+    type: fase
+    name: Choosing
+    description: From the home screen to the chosen restaurant
+    children:
+      - id: inicio
+        type: tela
+        name: Home screen
+        description: Nearby restaurants, deals and categories
+      - id: busca
+        type: acao
+        name: Searches "pizza"
+      - id: restaurante
+        type: tela
+        name: Restaurant page
+        description: Menu, delivery fee and estimated time
+      - id: vale-a-pena
+        type: decisao
+        name: Are the fee and time worth it?
+        description: 6 in 10 people look at more than one restaurant before deciding
+      - id: fecha-app
+        type: saida
+        name: Closes the app
+        description: A high delivery fee is the main reason
+
+  - id: pedido
+    type: fase
+    name: Ordering
+    description: From the cart to the approved payment
+    children:
+      - id: carrinho
+        type: tela
+        name: Cart
+        description: Items, notes and coupon
+      - id: pagamento
+        type: tela
+        name: Payment
+        description: Saved card, digital wallet or cash
+      - id: aprovado
+        type: decisao
+        name: Payment approved?
+      - id: troca-cartao
+        type: tela
+        name: Change payment method
+        description: Suggests a digital wallet when the card is declined
+      - id: desiste
+        type: saida
+        name: Abandons the order
+        description: Card declined twice
+
+  - id: entrega
+    type: fase
+    name: Delivery
+    description: From the confirmed order to the food at the door
+    children:
+      - id: confirmado
+        type: tela
+        name: Order confirmed
+        description: Shows the restaurant preparing it and the estimated time
+      - id: mapa
+        type: objetivo
+        name: Tracks the courier on the map
+        description: People who track on the map call support 70% less
+      - id: recebe
+        type: acao
+        name: Receives and rates
+        description: A rating for the restaurant and for the courier
+
+relations:
+  - { from: cliente, to: inicio, label: opens the app }
+  - { from: inicio, to: busca }
+  - { from: busca, to: restaurante, label: taps the first result }
+  - { from: restaurante, to: vale-a-pena }
+  - { from: vale-a-pena, to: inicio, label: "no: goes back to look at another" }
+  - { from: vale-a-pena, to: fecha-app, label: "no: gives up" }
+  - { from: vale-a-pena, to: carrinho, label: "yes: adds the items" }
+  - { from: carrinho, to: pagamento, label: Place order }
+  - { from: pagamento, to: aprovado }
+  - { from: aprovado, to: troca-cartao, label: declined }
+  - { from: troca-cartao, to: pagamento, label: tries a digital wallet }
+  - { from: troca-cartao, to: desiste, label: declined again }
+  - { from: aprovado, to: confirmado, label: approved }
+  - { from: confirmado, to: mapa, label: '"Track" button' }
+  - { from: push, to: mapa, label: opens straight on the map }
+  - { from: mapa, to: recebe, label: the courier arrived }
+
+flows:
+  - id: caminho-feliz
+    title: From opening the app to the courier on the map
+    description: The most common path, 6 minutes on average until paying
+    hops:
+      - { from: cliente, to: inicio }
+      - { from: inicio, to: busca }
+      - { from: busca, to: restaurante }
+      - { from: restaurante, to: vale-a-pena, label: checks the fee and the time }
+      - { from: vale-a-pena, to: carrinho }
+      - { from: carrinho, to: pagamento }
+      - { from: pagamento, to: aprovado, label: pays with the saved card }
+      - { from: aprovado, to: confirmado }
+      - { from: confirmado, to: mapa, label: tracks the courier }
+      - { from: mapa, to: recebe }
+  - id: cartao-recusado
+    title: Card declined
+    description: Where most already-decided orders are lost, and how some are saved
+    hops:
+      - { from: pagamento, to: aprovado }
+      - { from: aprovado, to: troca-cartao, label: the bank declines the card }
+      - { from: troca-cartao, to: pagamento, label: picks a digital wallet }
+      - { from: pagamento, to: aprovado, label: the wallet approves right away }
+      - { from: aprovado, to: confirmado }
+  - id: volta-pelo-push
+    title: Back through the notification
+    description: People who closed the app reach the feature through the push
+    hops:
+      - { from: push, to: mapa, label: taps "Your order is on its way" }
+      - { from: mapa, to: recebe }

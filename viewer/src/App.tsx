@@ -7,12 +7,17 @@ import { Toast } from "./components/Toast";
 import { TopBar } from "./components/TopBar";
 import { useHashSync, useKeyboard } from "./hooks";
 import { titleOf } from "./lib/model";
+import { useLang } from "./i18n";
 import { useStore } from "./store";
 
 export default function App() {
   useHashSync();
   useKeyboard();
   const doc = useStore((s) => s.doc);
+  const lang = useLang((s) => s.lang);
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
 
   useEffect(() => {
     document.title = doc ? `${titleOf(doc)} · Blueroll` : "Blueroll";

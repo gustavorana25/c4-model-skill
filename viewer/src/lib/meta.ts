@@ -2,11 +2,11 @@ import { AppWindow, Circle, Cog, PencilLine, Server, Smartphone, Sparkles, Trash
 import { typeMeta, type Notation } from "./notation";
 import type { ArchElement, Status } from "./types";
 
-export const STATUS_META: Record<Status, { label: string; icon: LucideIcon; stroke: string; ink: string; soft: string }> = {
-  new: { label: "Novo", icon: Sparkles, stroke: "#46C46A", ink: "#6BDB8A", soft: "rgba(70,196,106,.14)" },
-  changed: { label: "Alterado", icon: PencilLine, stroke: "#E3A23B", ink: "#F0B860", soft: "rgba(227,162,59,.14)" },
-  removed: { label: "Removido", icon: Trash2, stroke: "#F2685F", ink: "#FF9A90", soft: "rgba(242,104,95,.14)" },
-  unchanged: { label: "Inalterado", icon: Circle, stroke: "#5A6375", ink: "#A3ACBB", soft: "rgba(163,172,187,.10)" },
+export const STATUS_META: Record<Status, { icon: LucideIcon; stroke: string; ink: string; soft: string }> = {
+  new: { icon: Sparkles, stroke: "#46C46A", ink: "#6BDB8A", soft: "rgba(70,196,106,.14)" },
+  changed: { icon: PencilLine, stroke: "#E3A23B", ink: "#F0B860", soft: "rgba(227,162,59,.14)" },
+  removed: { icon: Trash2, stroke: "#F2685F", ink: "#FF9A90", soft: "rgba(242,104,95,.14)" },
+  unchanged: { icon: Circle, stroke: "#5A6375", ink: "#A3ACBB", soft: "rgba(163,172,187,.10)" },
 };
 
 // Ícone inferido da tecnologia/nome (tipos com iconByTech, como container no c4),

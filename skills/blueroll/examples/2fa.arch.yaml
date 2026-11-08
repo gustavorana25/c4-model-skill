@@ -1,0 +1,278 @@
+# yaml-language-server: $schema=../schema/arch.v1.json
+# Exemplo de plano em C4 (a notação padrão). Versões traduzidas: 2fa.en.arch.yaml e 2fa.es.arch.yaml.
+version: 1
+lang: pt-BR
+plan: Adicionar login com dois fatores (2FA)
+description: >
+  Depois da senha, quem ativou o 2FA digita um código de 6 dígitos do app autenticador
+  ou recebido por SMS. A sessão só é aberta quando o código confere.
+
+elements:
+  - id: usuario
+    type: person
+    name: Usuário
+    description: Entra na conta pelo navegador
+
+  - id: plataforma
+    type: system
+    name: Plataforma
+    status: changed
+    children:
+      # ------------------------------------------------------------ Web App
+      - id: web-app
+        type: container
+        name: Web App
+        tech: React
+        status: changed
+        description: O login ganha a etapa do código e a tela de ativação do 2FA
+        children:
+          - id: login-page
+            type: component
+            name: Tela de login
+            status: changed
+            children:
+              - id: login-page-view
+                type: code
+                name: LoginPage
+                path: apps/web/src/pages/login.tsx
+                status: changed
+                description: Depois da senha, pede o código quando a API responde que falta o segundo fator
+              - id: auth-api-client
+                type: code
+                name: authApi
+                path: apps/web/src/lib/auth-api.ts
+                status: changed
+                description: Ganha POST /login/2fa e POST /2fa/setup
+                constraints:
+                  - Tipos gerados de contracts/auth.openapi.yaml; nada escrito à mão
+          - id: two-factor-ui
+            type: component
+            name: Telas de 2FA
+            status: new
+            children:
+              - id: two-factor-prompt
+                type: code
+                name: TwoFactorPrompt
+                path: apps/web/src/components/two-factor-prompt.tsx
+                status: new
+                description: Campo de 6 dígitos, opção "receber por SMS" e tentativas restantes
+              - id: two-factor-setup
+                type: code
+                name: TwoFactorSetup
+                path: apps/web/src/pages/settings/two-factor.tsx
+                status: new
+                description: Mostra o QR Code para o app autenticador e confirma o primeiro código
+
+      # ------------------------------------------------------------ Auth API
+      - id: auth-api
+        type: container
+        name: Auth API
+        tech: Node.js
+        status: changed
+        description: Autentica e abre sessões
+        children:
+          - id: login
+            type: component
+            name: Login
+            status: changed
+            constraints:
+              - Senha errada e usuário inexistente respondem igual (sem revelar quem tem conta)
+            children:
+              - id: login-controller
+                type: code
+                name: LoginController
+                path: src/auth/login.controller.ts
+                status: changed
+                description: Confere a senha; com 2FA ativo, cria um desafio em vez de abrir a sessão
+              - id: create-session
+                type: code
+                name: createSession
+                path: src/auth/create-session.ts
+                description: Abre a sessão e devolve o cookie (existente)
+          - id: two-factor
+            type: component
+            name: Segundo fator
+            status: new
+            constraints:
+              - O desafio vale 5 minutos e aceita no máximo 5 tentativas
+              - O segredo TOTP fica cifrado no banco (chave no KMS), nunca em log
+            children:
+              - id: two-factor-controller
+                type: code
+                name: TwoFactorController
+                path: src/auth/two-factor/two-factor.controller.ts
+                status: new
+                description: POST /login/2fa confere o código; POST /2fa/setup ativa o 2FA
+              - id: verify-totp
+                type: code
+                name: verifyTotp
+                path: src/auth/two-factor/verify-totp.ts
+                status: new
+                description: Confere o código de 6 dígitos (RFC 6238)
+                constraints:
+                  - Aceita só o passo atual e o anterior (30 s cada)
+              - id: send-sms-code
+                type: code
+                name: sendSmsCode
+                path: src/auth/two-factor/send-sms-code.ts
+                status: new
+                description: Gera um código de uso único e manda por SMS
+                constraints:
+                  - No máximo 3 SMS por usuário a cada 10 minutos
+              - id: challenge-repo
+                type: code
+                name: ChallengeRepository
+                path: src/auth/two-factor/challenge.repository.ts
+                status: new
+                description: Cria, lê e invalida desafios de login
+
+      # ------------------------------------------------------------ Users DB
+      - id: users-db
+        type: database
+        name: Users DB
+        tech: PostgreSQL
+        status: changed
+        constraints:
+          - Migração aditiva (colunas nullable), sem lock de tabela
+        children:
+          - id: users-table
+            type: component
+            name: Tabela users
+            status: changed
+            description: Ganha two_factor_secret (cifrado) e two_factor_enabled_at
+            children:
+              - id: add-two-factor-migration
+                type: code
+                name: add_two_factor
+                path: db/migrations/20261110_add_two_factor.sql
+                status: new
+                description: ADD COLUMN two_factor_secret, two_factor_enabled_at
+              - id: user-model
+                type: code
+                name: User
+                path: src/users/user.model.ts
+                status: changed
+                description: Modelo ganha twoFactorEnabled e o segredo cifrado
+
+      # ------------------------------------------------------------ Redis
+      - id: challenges-cache
+        type: database
+        name: Cache de desafios
+        tech: Redis
+        status: new
+        description: Desafios de login pendentes, com expiração
+        children:
+          - id: login-challenges
+            type: component
+            name: Desafios de login
+            status: new
+            constraints:
+              - Expiram sozinhos (TTL de 5 min); nada fica para limpar depois
+            children:
+              - id: challenge-key
+                type: code
+                name: challenge:{id}
+                path: src/auth/two-factor/challenge.schema.ts
+                status: new
+                description: userId, tentativas e método (app ou SMS)
+
+  - id: autenticador
+    type: external
+    name: App autenticador
+    description: No celular do usuário (Google Authenticator, 1Password...)
+
+  - id: sms
+    type: external
+    name: Provedor de SMS
+    status: new
+    description: Entrega o código quando o usuário não tem o app
+
+relations:
+  # usuário e web
+  - { from: usuario, to: login-page-view, label: "entra com e-mail e senha", protocol: HTTPS }
+  - { from: usuario, to: autenticador, label: "lê o código de 6 dígitos", status: new }
+  - { from: usuario, to: two-factor-prompt, label: "digita o código", status: new }
+  - { from: usuario, to: two-factor-setup, label: "ativa o 2FA", status: new }
+  - { from: login-page-view, to: auth-api-client, label: "envia o login" }
+  - { from: login-page-view, to: two-factor-prompt, label: "pede o código", status: new }
+  - { from: two-factor-prompt, to: auth-api-client, label: "envia o código", status: new }
+  - { from: two-factor-setup, to: auth-api-client, label: "confirma a ativação", status: new }
+  - { from: auth-api-client, to: login-controller, label: "POST /login", protocol: HTTPS/JSON, status: changed, contract: contracts/auth.openapi.yaml }
+  - { from: auth-api-client, to: two-factor-controller, label: "POST /login/2fa", protocol: HTTPS/JSON, status: new, contract: contracts/auth.openapi.yaml }
+  # login
+  - { from: login-controller, to: user-model, label: "busca o usuário", protocol: SQL }
+  - { from: login-controller, to: create-session, label: "abre a sessão (sem 2FA)" }
+  - { from: login-controller, to: challenge-repo, label: "cria o desafio", status: new }
+  - { from: login-controller, to: send-sms-code, label: "manda SMS, se pedido", status: new }
+  # segundo fator
+  - { from: two-factor-controller, to: challenge-repo, label: "busca e conta tentativas", status: new }
+  - { from: two-factor-controller, to: verify-totp, label: "confere o código", status: new }
+  - { from: two-factor-controller, to: create-session, label: "abre a sessão", status: new }
+  - { from: two-factor-controller, to: user-model, label: "grava o segredo cifrado", protocol: SQL, status: new }
+  - { from: verify-totp, to: user-model, label: "lê o segredo", protocol: SQL, status: new }
+  - { from: challenge-repo, to: challenge-key, label: "grava com TTL de 5 min", protocol: Redis, status: new }
+  - { from: send-sms-code, to: challenge-repo, label: "guarda o código", status: new }
+  - { from: send-sms-code, to: sms, label: "envia o SMS", protocol: HTTPS, status: new, contract: contracts/sms-provider.yaml }
+  - { from: sms, to: usuario, label: "entrega o código", protocol: SMS, status: new }
+
+steps:
+  - id: s1
+    title: Migração da tabela users (segredo e data de ativação)
+    touches: [users-db]
+  - id: s2
+    title: Guardar desafios de login no Redis
+    touches: [challenges-cache]
+  - id: s3
+    title: Verificação do código (app e SMS) no Auth API
+    touches: [two-factor, sms]
+  - id: s4
+    title: Login passa a pedir o segundo fator
+    touches: [login]
+  - id: s5
+    title: Telas de código e de ativação
+    touches: [web-app]
+
+flows:
+  - id: login-com-app
+    title: Login com o app autenticador
+    description: Da senha à sessão aberta, com o código do celular.
+    hops:
+      - { from: usuario, to: login-page-view, label: "digita e-mail e senha" }
+      - { from: login-page-view, to: auth-api-client, label: "envia o login" }
+      - { from: auth-api-client, to: login-controller, label: "POST /login" }
+      - { from: login-controller, to: user-model, label: "senha confere e o 2FA está ativo" }
+      - { from: login-controller, to: challenge-repo, label: "cria um desafio de 5 minutos" }
+      - { from: challenge-repo, to: challenge-key, label: "grava no Redis com TTL" }
+      - { from: login-controller, to: auth-api-client, label: "responde: falta o segundo fator" }
+      - { from: login-page-view, to: two-factor-prompt, label: "mostra o campo do código" }
+      - { from: usuario, to: autenticador, label: "abre o app e lê o código" }
+      - { from: usuario, to: two-factor-prompt, label: "digita os 6 dígitos" }
+      - { from: two-factor-prompt, to: auth-api-client, label: "envia o código" }
+      - { from: auth-api-client, to: two-factor-controller, label: "POST /login/2fa" }
+      - { from: two-factor-controller, to: challenge-repo, label: "desafio válido, 1ª tentativa" }
+      - { from: two-factor-controller, to: verify-totp, label: "confere o código" }
+      - { from: verify-totp, to: user-model, label: "usa o segredo do usuário" }
+      - { from: two-factor-controller, to: create-session, label: "código certo: abre a sessão" }
+
+  - id: codigo-por-sms
+    title: Código por SMS
+    description: Quem está sem o celular com o app pede o código por SMS.
+    hops:
+      - { from: two-factor-prompt, to: auth-api-client, label: "toca em \"receber por SMS\"" }
+      - { from: auth-api-client, to: login-controller, label: "pede o reenvio" }
+      - { from: login-controller, to: send-sms-code, label: "gera um código de uso único" }
+      - { from: send-sms-code, to: challenge-repo, label: "guarda o código no desafio" }
+      - { from: send-sms-code, to: sms, label: "envia (até 3 a cada 10 min)" }
+      - { from: sms, to: usuario, label: "chega o SMS" }
+      - { from: usuario, to: two-factor-prompt, label: "digita o código" }
+      - { from: two-factor-prompt, to: auth-api-client, label: "envia o código" }
+      - { from: auth-api-client, to: two-factor-controller, label: "POST /login/2fa" }
+      - { from: two-factor-controller, to: create-session, label: "código certo: abre a sessão" }
+
+  - id: codigo-errado
+    title: Código errado demais
+    hops:
+      - { from: two-factor-controller, to: verify-totp, label: "código não confere" }
+      - { from: two-factor-controller, to: challenge-repo, label: "conta a tentativa; na 5ª, invalida o desafio" }
+      - { from: two-factor-controller, to: auth-api-client, label: "responde 401 com as tentativas restantes" }
+      - { from: auth-api-client, to: two-factor-prompt, label: "mostra o erro ou volta para a senha" }

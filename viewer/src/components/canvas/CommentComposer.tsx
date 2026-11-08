@@ -2,6 +2,7 @@ import { ArrowUp, AtSign, MessageCircle, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { comment } from "../../bridge";
 import { typeMeta } from "../../lib/notation";
+import { useT } from "../../i18n";
 import { useStore } from "../../store";
 import { ElementIcon } from "../ElementIcon";
 import { cn, floating } from "../ui";
@@ -30,6 +31,7 @@ export function CommentComposer() {
   const [hi, setHi] = useState(0);
   const [busy, setBusy] = useState(false);
   const ta = useRef<HTMLTextAreaElement>(null);
+  const t = useT();
 
   useEffect(() => {
     if (commenting) ta.current?.focus();
@@ -65,7 +67,7 @@ export function CommentComposer() {
     setBusy(true);
     const r = await comment(targets, v);
     setBusy(false);
-    if (r === "sent") useStore.getState().notify("Enviado. A IA responde no chat.");
+    if (r === "sent") useStore.getState().notify(t("comment.sent"));
     setText("");
     setCommenting(false);
   };
@@ -108,7 +110,7 @@ export function CommentComposer() {
   };
 
   return (
-    <div className="absolute bottom-16 left-1/2 z-20 w-[min(560px,calc(100%-32px))] -translate-x-1/2" role="dialog" aria-label="Comentar no chat">
+    <div className="absolute bottom-16 left-1/2 z-20 w-[min(560px,calc(100%-32px))] -translate-x-1/2" role="dialog" aria-label={t("comment.dialog")}>
       {options.length > 0 && (
         <ul role="listbox" className={cn(floating, "mb-2 overflow-hidden p-1")}>
           {options.map((o, i) => (
@@ -136,18 +138,18 @@ export function CommentComposer() {
             return (
               <span key={id} className="inline-flex items-center gap-1 rounded-full bg-accent-bg py-0.5 pl-2 pr-1 text-[12px] font-medium text-accent-ink">
                 {el?.name ?? id}
-                <button type="button" onClick={() => toggle(id)} className="flex size-4 cursor-pointer items-center justify-center rounded-full hover:bg-white/10" aria-label={`Tirar ${el?.name ?? id}`}>
+                <button type="button" onClick={() => toggle(id)} className="flex size-4 cursor-pointer items-center justify-center rounded-full hover:bg-white/10" aria-label={t("comment.remove", el?.name ?? id)}>
                   <X size={11} />
                 </button>
               </span>
             );
           })}
           <span className="text-[12px] text-subtle">
-            {targets.length ? "Clique em outros cards para incluir" : "Clique nos cards sobre os quais quer comentar, ou use @"}
+            {targets.length ? t("comment.hintMore") : t("comment.hintFirst")}
           </span>
         </div>
         <label htmlFor="comment-text" className="sr-only">
-          Comentário
+          {t("comment.label")}
         </label>
         <textarea
           id="comment-text"
@@ -160,22 +162,22 @@ export function CommentComposer() {
           }}
           onSelect={(e) => setCaret(e.currentTarget.selectionStart)}
           onKeyDown={onKey}
-          placeholder="Pergunte ou peça uma mudança…"
+          placeholder={t("comment.placeholder")}
           className="block w-full resize-none bg-transparent px-4 py-2.5 text-[14.5px] text-fg placeholder:text-subtle focus:outline-none"
         />
         <div className="flex items-center gap-2 border-t border-line px-3 py-2">
-          <button type="button" onClick={insertAt} className="flex size-8 cursor-pointer items-center justify-center rounded-lg text-muted hover:bg-hover hover:text-fg" aria-label="Citar um elemento">
+          <button type="button" onClick={insertAt} className="flex size-8 cursor-pointer items-center justify-center rounded-lg text-muted hover:bg-hover hover:text-fg" aria-label={t("comment.mention")}>
             <AtSign size={16} />
           </button>
           <span className="min-w-0 flex-1 truncate text-[12px] text-subtle">
-            {listening ? "Vai para o chat · Enter envia · Esc fecha" : "IA não está escutando: o texto será copiado para você colar no chat"}
+            {listening ? t("comment.footerOn") : t("comment.footerOff")}
           </span>
           <button
             type="button"
             onClick={submit}
             disabled={!text.trim() || busy}
             className="flex size-8 cursor-pointer items-center justify-center rounded-full bg-accent text-white transition hover:brightness-110 disabled:cursor-default disabled:opacity-40"
-            aria-label={listening ? "Enviar para o chat" : "Copiar para colar no chat"}
+            aria-label={listening ? t("comment.send") : t("comment.copy")}
           >
             <ArrowUp size={16} strokeWidth={2.4} />
           </button>

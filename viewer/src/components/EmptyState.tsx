@@ -1,22 +1,26 @@
 import { load } from "js-yaml";
-import { AlertTriangle, ArrowRight, Boxes, Cloud, Route, type LucideIcon } from "lucide-react";
+import { AlertTriangle, ArrowRight, Cloud, Route, ShieldCheck, type LucideIcon } from "lucide-react";
 import { useState } from "react";
-import pixYaml from "../../../skills/blueroll/examples/pix.arch.yaml?raw";
-import awsYaml from "../../../skills/blueroll/examples/aws.arch.yaml?raw";
-import jornadaYaml from "../../../skills/blueroll/examples/jornada.arch.yaml?raw";
+import twoFaPt from "../../../skills/blueroll/examples/2fa.arch.yaml?raw";
+import twoFaEn from "../../../skills/blueroll/examples/2fa.en.arch.yaml?raw";
+import twoFaEs from "../../../skills/blueroll/examples/2fa.es.arch.yaml?raw";
+import awsPt from "../../../skills/blueroll/examples/aws.arch.yaml?raw";
+import awsEn from "../../../skills/blueroll/examples/aws.en.arch.yaml?raw";
+import awsEs from "../../../skills/blueroll/examples/aws.es.arch.yaml?raw";
+import jornadaPt from "../../../skills/blueroll/examples/jornada.arch.yaml?raw";
+import jornadaEn from "../../../skills/blueroll/examples/jornada.en.arch.yaml?raw";
+import jornadaEs from "../../../skills/blueroll/examples/jornada.es.arch.yaml?raw";
+import { useLang, useT, type Key, type Lang } from "../i18n";
 import { useStore } from "../store";
 import { Button, cn } from "./ui";
 
-const STEPS = [
-  ["A IA propõe", "Gera o diagrama a partir do plano, com o que é novo, alterado ou removido."],
-  ["Você entende", "Vê como o plano afeta o que existe hoje, descendo de nível só onde importa."],
-  ["Você comenta", "Aponta os cards e pergunta ou pede mudança. A conversa e a aprovação ficam no chat."],
-];
+const STEPS = [1, 2, 3] as const;
 
-const EXAMPLES: { title: string; kind: string; desc: string; icon: LucideIcon; yaml: string }[] = [
-  { title: "Pagamento via PIX", kind: "Plano · C4", desc: "O que um plano cria e altera, do contexto até o código.", icon: Boxes, yaml: pixYaml },
-  { title: "Entidades da AWS", kind: "Informativo · Infra", desc: "O papel de cada serviço, quem fala com quem e as permissões.", icon: Cloud, yaml: awsYaml },
-  { title: "Jornada num app de delivery", kind: "Informativo · Jornada", desc: "Da tela inicial ao entregador no mapa, com os pontos de saída.", icon: Route, yaml: jornadaYaml },
+/** Cada exemplo em pt-BR, en e es (mesmos ids): o card abre o do idioma da interface. */
+const EXAMPLES: { id: "2fa" | "aws" | "jornada"; icon: LucideIcon; yaml: Record<Lang, string> }[] = [
+  { id: "2fa", icon: ShieldCheck, yaml: { "pt-BR": twoFaPt, en: twoFaEn, es: twoFaEs } },
+  { id: "aws", icon: Cloud, yaml: { "pt-BR": awsPt, en: awsEn, es: awsEs } },
+  { id: "jornada", icon: Route, yaml: { "pt-BR": jornadaPt, en: jornadaEn, es: jornadaEs } },
 ];
 
 export function EmptyState() {
@@ -25,6 +29,8 @@ export function EmptyState() {
   const [text, setText] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [drag, setDrag] = useState(false);
+  const t = useT();
+  const lang = useLang((s) => s.lang);
 
   const render = (src: string) => {
     try {
@@ -40,20 +46,21 @@ export function EmptyState() {
       <div className="flex w-full max-w-[720px] flex-col gap-7">
         <div className="flex flex-col items-center gap-2.5 text-center">
           <h1 className="text-[32px] font-bold leading-tight tracking-tight text-fg">
-            Veja o que o plano muda
-            <br />antes de virar código.
+            {t("empty.title1")}
+            <br />
+            {t("empty.title2")}
           </h1>
           <p className="max-w-[520px] text-[15px] leading-relaxed text-muted">
-            Abra o link que a IA gerou para o seu plano, ou cole o YAML aqui para ver o diagrama.
+            {t("empty.lead")}
           </p>
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          {STEPS.map(([t, d], i) => (
-            <div key={t} className="flex flex-col gap-2 rounded-[14px] border border-[#222A39] bg-raised p-4">
-              <span className="flex size-7 items-center justify-center rounded-lg bg-accent-bg text-[13px] font-bold text-accent-ink">{i + 1}</span>
-              <b className="text-[14px] text-fg">{t}</b>
-              <span className="text-[13px] leading-relaxed text-muted">{d}</span>
+          {STEPS.map((n) => (
+            <div key={n} className="flex flex-col gap-2 rounded-[14px] border border-[#222A39] bg-raised p-4">
+              <span className="flex size-7 items-center justify-center rounded-lg bg-accent-bg text-[13px] font-bold text-accent-ink">{n}</span>
+              <b className="text-[14px] text-fg">{t(`empty.step${n}.t`)}</b>
+              <span className="text-[13px] leading-relaxed text-muted">{t(`empty.step${n}.d`)}</span>
             </div>
           ))}
         </div>
@@ -65,7 +72,7 @@ export function EmptyState() {
             </div>
           )}
           <label htmlFor="yaml" className="text-[13px] font-semibold text-fg-2">
-            YAML ou JSON do plano
+            {t("empty.yamlLabel")}
           </label>
           <textarea
             id="yaml"
@@ -80,17 +87,17 @@ export function EmptyState() {
               const f = e.dataTransfer.files[0];
               if (f) render(await f.text());
             }}
-            placeholder={"version: 1\nplan: Meu plano\nelements:\n  - id: api\n    type: container\n    name: API"}
+            placeholder={t("empty.placeholder")}
             className={cn(
               "resize-y rounded-xl border border-dashed bg-canvas p-3.5 font-mono text-[12.5px] leading-relaxed text-fg placeholder:text-subtle focus:outline-none",
               drag ? "border-accent-soft" : "border-line-focus focus:border-accent-soft",
             )}
           />
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <span className="text-[12.5px] text-subtle">Ou arraste um arquivo .yaml para a área acima</span>
+            <span className="text-[12.5px] text-subtle">{t("empty.drop")}</span>
             <div className="flex flex-wrap gap-2.5">
               <Button variant="primary" size="lg" onClick={() => render(text)} disabled={!text.trim()}>
-                Abrir diagrama
+                {t("empty.open")}
               </Button>
             </div>
           </div>
@@ -98,14 +105,14 @@ export function EmptyState() {
 
         <section aria-labelledby="exemplos" className="flex flex-col gap-3">
           <h2 id="exemplos" className="text-[13px] font-semibold text-fg-2">
-            Ou abra um exemplo
+            {t("empty.examples")}
           </h2>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {EXAMPLES.map((ex) => (
               <button
-                key={ex.title}
+                key={ex.id}
                 type="button"
-                onClick={() => render(ex.yaml)}
+                onClick={() => render(ex.yaml[lang])}
                 className="group flex cursor-pointer flex-col gap-2 rounded-[14px] border border-[#222A39] bg-raised p-4 text-left transition hover:border-line-focus hover:bg-hover"
               >
                 <span className="flex items-center justify-between">
@@ -114,15 +121,15 @@ export function EmptyState() {
                   </span>
                   <ArrowRight size={15} className="text-subtle transition group-hover:translate-x-0.5 group-hover:text-fg" />
                 </span>
-                <span className="text-[11px] font-semibold uppercase tracking-[.04em] text-subtle">{ex.kind}</span>
-                <b className="text-[14px] text-fg">{ex.title}</b>
-                <span className="text-[12.5px] leading-relaxed text-muted">{ex.desc}</span>
+                <span className="text-[11px] font-semibold uppercase tracking-[.04em] text-subtle">{t(`empty.ex.${ex.id}.k` as Key)}</span>
+                <b className="text-[14px] text-fg">{t(`empty.ex.${ex.id}.t` as Key)}</b>
+                <span className="text-[12.5px] leading-relaxed text-muted">{t(`empty.ex.${ex.id}.d` as Key)}</span>
               </button>
             ))}
           </div>
         </section>
 
-        <p className="text-center text-[12.5px] text-subtle">Tudo fica no seu navegador. O link carrega o plano inteiro, sem servidor.</p>
+        <p className="text-center text-[12.5px] text-subtle">{t("empty.privacy")}</p>
       </div>
     </main>
   );

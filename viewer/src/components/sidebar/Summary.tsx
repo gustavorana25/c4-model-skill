@@ -4,6 +4,7 @@ import { STATUS_META } from "../../lib/meta";
 import { summaryStats, typeMeta } from "../../lib/notation";
 import { isSystemDoc, statusOf, titleOf } from "../../lib/model";
 import type { ArchElement } from "../../lib/types";
+import { useT, type Key } from "../../i18n";
 import { useStore } from "../../store";
 import { SectionTitle } from "../ui";
 
@@ -19,6 +20,7 @@ function PlanSummary() {
   const doc = useStore((s) => s.doc)!;
   const model = useStore((s) => s.model)!;
   const goto = useStore((s) => s.goto);
+  const t = useT();
 
   const els = [...model.index.values()];
   const groups = KINDS.map((k) => ({ k, els: els.filter((e) => statusOf(e) === k) }));
@@ -27,7 +29,7 @@ function PlanSummary() {
   return (
     <div className="flex flex-col gap-6 p-5">
       <div>
-        <div className="text-[11px] font-semibold uppercase tracking-[.08em] text-subtle">Plano</div>
+        <div className="text-[11px] font-semibold uppercase tracking-[.08em] text-subtle">{t("sum.plan")}</div>
         <h2 className="mt-1 text-lg font-semibold leading-snug text-fg">{titleOf(doc)}</h2>
         {doc.description && <p className="mt-2 text-[13.5px] leading-relaxed text-muted">{doc.description}</p>}
       </div>
@@ -38,7 +40,7 @@ function PlanSummary() {
           return (
             <div key={k} className="rounded-xl border border-line bg-[#121824] px-3 py-2.5">
               <div className="flex items-center gap-1 text-[11.5px] font-medium" style={{ color: S.ink }}>
-                <S.icon size={12} /> {S.label}s
+                <S.icon size={12} /> {t(`status.${k}.plural`)}
               </div>
               <div className="mt-0.5 text-2xl font-semibold tabular-nums text-fg">{els.length}</div>
             </div>
@@ -52,7 +54,7 @@ function PlanSummary() {
           .map(({ k, els }) => (
             <section key={k}>
               <SectionTitle>
-                <span style={{ color: STATUS_META[k].ink }}>{STATUS_META[k].label}s</span>
+                <span style={{ color: STATUS_META[k].ink }}>{t(`status.${k}.plural`)}</span>
               </SectionTitle>
               <ul className="overflow-hidden rounded-xl border border-line">
                 {els.map((e, i) => (
@@ -62,7 +64,7 @@ function PlanSummary() {
             </section>
           ))
       ) : (
-        <p className="text-[13px] text-subtle">Este plano não marca nenhum elemento como novo, alterado ou removido.</p>
+        <p className="text-[13px] text-subtle">{t("sum.nothingMarked")}</p>
       )}
 
       <HowTo items={PLAN_HOWTO} />
@@ -93,32 +95,24 @@ function ElementRow({ el, first, onClick }: { el: ArchElement; first: boolean; o
   );
 }
 
-const PLAN_HOWTO = [
-  ["Veja o que muda", "Verde é novo, laranja é alterado, tracejado é removido. “Abrir” (ou duplo clique) abre a caixa no lugar; “Fechar” recolhe."],
-  ["Siga um fluxo", "Na aba Fluxos, avance salto a salto (← →) e veja como o sistema funciona depois do plano."],
-  ["Veja a ordem de construção", "Na aba Passos, cada passo acende os elementos que ele toca."],
-  ["Pergunte ou peça mudança", "Aperte C, clique nos cards e escreva. A conversa acontece no chat."],
-];
+/** Prefixos das chaves "howto.*" (cada um com .t e .d). */
+const PLAN_HOWTO = ["plan1", "plan2", "plan3", "plan4"];
+const SYSTEM_HOWTO = ["sys1", "sys2", "sys3"];
 
-const SYSTEM_HOWTO = [
-  ["Comece pelos fluxos", "Na aba Fluxos, siga o caminho principal salto a salto (← →). O diagrama abre as caixas por onde ele passa."],
-  ["Desça onde quiser", "“Abrir” (ou duplo clique) mostra o que tem dentro; “Fechar” recolhe."],
-  ["Pergunte", "Aperte C, clique nos cards e escreva. A resposta vem no chat."],
-];
-
-function HowTo({ items }: { items: string[][] }) {
+function HowTo({ items }: { items: string[] }) {
+  const tr = useT();
   return (
     <section>
-      <SectionTitle>Como usar</SectionTitle>
+      <SectionTitle>{tr("sum.howTo")}</SectionTitle>
       <ol className="flex flex-col gap-3">
-        {items.map(([t, d], i) => (
-          <li key={t} className="flex gap-3">
+        {items.map((k, i) => (
+          <li key={k} className="flex gap-3">
             <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-accent-bg text-[12px] font-bold text-accent-ink">
               {i + 1}
             </span>
             <div>
-              <div className="text-[13.5px] font-medium text-fg">{t}</div>
-              <div className="text-[12.5px] text-muted">{d}</div>
+              <div className="text-[13.5px] font-medium text-fg">{tr(`howto.${k}.t` as Key)}</div>
+              <div className="text-[12.5px] text-muted">{tr(`howto.${k}.d` as Key)}</div>
             </div>
           </li>
         ))}
@@ -134,6 +128,7 @@ function SystemSummary() {
   const goto = useStore((s) => s.goto);
   const setTab = useStore((s) => s.setTab);
   const openFlow = useStore((s) => s.openFlow);
+  const t = useT();
 
   const els = [...model.index.values()];
   const stats = summaryStats(model.notation, els.map((e) => e.type));
@@ -145,7 +140,7 @@ function SystemSummary() {
   return (
     <div className="flex flex-col gap-6 p-5">
       <div>
-        <div className="text-[11px] font-semibold uppercase tracking-[.08em] text-subtle">{model.notation.name === "c4" ? "Sistema" : "Diagrama"}</div>
+        <div className="text-[11px] font-semibold uppercase tracking-[.08em] text-subtle">{model.notation.name === "c4" ? t("sum.system") : t("sum.diagram")}</div>
         <h2 className="mt-1 text-lg font-semibold leading-snug text-fg">{titleOf(doc)}</h2>
         {doc.description && <p className="mt-2 text-[13.5px] leading-relaxed text-muted">{doc.description}</p>}
       </div>
@@ -161,7 +156,7 @@ function SystemSummary() {
 
       {flows.length > 0 && (
         <section>
-          <SectionTitle>Por onde começar</SectionTitle>
+          <SectionTitle>{t("sum.start")}</SectionTitle>
           <ul className="overflow-hidden rounded-xl border border-line">
             {flows.map((f, i) => (
               <li key={f.id} className={i ? "border-t border-line" : ""}>
@@ -176,7 +171,7 @@ function SystemSummary() {
                   <Route size={14} className="shrink-0 text-accent-ink" />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-medium text-fg">{f.title}</span>
-                    <span className="block truncate text-[12px] text-subtle">{f.description ?? `${f.hops.length} saltos`}</span>
+                    <span className="block truncate text-[12px] text-subtle">{f.description ?? t("flows.hops", f.hops.length)}</span>
                   </span>
                   <ArrowRight size={14} className="shrink-0 text-subtle transition group-hover:translate-x-0.5 group-hover:text-fg" />
                 </button>
@@ -188,7 +183,7 @@ function SystemSummary() {
 
       {parts.length > 0 && (
         <section>
-          <SectionTitle>Peças</SectionTitle>
+          <SectionTitle>{t("sum.parts")}</SectionTitle>
           <ul className="overflow-hidden rounded-xl border border-line">
             {parts.map((e, i) => (
               <ElementRow key={e.id} el={e} first={!i} onClick={() => goto(e.id)} />

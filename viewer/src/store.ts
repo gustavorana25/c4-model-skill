@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { useLang } from "./i18n";
 import { buildModel, hasChildren, isWithin, parseDoc, titleOf, type Model } from "./lib/model";
 import { defaultExpanded, revealing } from "./lib/view";
 import type { ArchDoc } from "./lib/types";
@@ -90,7 +91,7 @@ export const useStore = create<State>((set, get) => ({
 
   load: (raw, focus = null) => {
     const doc = parseDoc(raw);
-    const model = buildModel(doc);
+    const model = buildModel(doc, useLang.getState().lang);
     const f = focus && model.index.has(focus) && hasChildren(model.index.get(focus)!) ? focus : null;
     // comentário em andamento sobrevive a uma versão nova do plano (o agente chama load()), sem alvos que sumiram
     const commentTargets = get().commentTargets.filter((t) => model.index.has(t));
@@ -162,3 +163,10 @@ export const useStore = create<State>((set, get) => ({
   toggleOnlyChanges: () => set((s) => ({ onlyChanges: !s.onlyChanges })),
   notify: (msg, tone = "ok") => set({ toast: { msg, at: Date.now(), tone } }),
 }));
+
+// trocar o idioma remonta o modelo: rótulos da notação e problemas saem no idioma novo
+useLang.subscribe((st, prev) => {
+  if (st.lang === prev.lang) return;
+  const { doc, model } = useStore.getState();
+  if (doc && model) useStore.setState({ model: buildModel(doc, st.lang) });
+});

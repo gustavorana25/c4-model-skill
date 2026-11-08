@@ -12,6 +12,7 @@
  * inatividade. Depois de IDLE_MS parado, next() devolve {event:"stop"} e a escuta acaba.
  */
 import { copyText, flushHash } from "./hooks";
+import { t } from "./i18n";
 import { titleOf } from "./lib/model";
 import { useStore } from "./store";
 
@@ -121,11 +122,9 @@ export function stop() {
 export function commentText(targets: Target[], text: string) {
   if (!targets.length) return text;
   const refs = targets.map((t) => `"${t.name}" (${t.id})`);
-  const list = refs.length > 1 ? `${refs.slice(0, -1).join(", ")} e ${refs.at(-1)}` : refs[0];
-  return `Sobre ${list} no diagrama: ${text}`;
+  const list = refs.length > 1 ? `${refs.slice(0, -1).join(", ")} ${t("comment.and")} ${refs.at(-1)}` : refs[0];
+  return t("comment.text", list, text);
 }
-
-const NOT_SENT = "Não consegui falar com o chat. A mensagem está na área de transferência: cole no chat.";
 
 /**
  * Manda um comentário sobre um ou mais elementos para o chat.
@@ -136,7 +135,7 @@ export async function comment(targetIds: string[], text: string): Promise<"sent"
   const targets = targetIds.map((id) => ({ id, name: s.model?.index.get(id)?.name ?? id }));
   const fallback = async () => {
     await copyText(commentText(targets, text));
-    useStore.getState().notify(NOT_SENT, "warn");
+    useStore.getState().notify(t("comment.notSent"), "warn");
   };
   if (!isListening()) {
     await fallback();

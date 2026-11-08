@@ -8,6 +8,8 @@ import {
   Smartphone, Split, Square, Table, Tag, Terminal, User, Users, Workflow, Wrench, Zap, type LucideIcon,
 } from "lucide-react";
 import presets from "../../../skills/blueroll/schema/notations.json";
+import translations from "../../../skills/blueroll/schema/notations.i18n.json";
+import type { Lang } from "../i18n";
 import type { ArchDoc, TypeDef } from "./types";
 
 /** Nome em notations.json -> ícone. Um teste garante que a lista "icons" do JSON e este mapa batem. */
@@ -53,6 +55,8 @@ export interface Notation {
   summary: { label: string; types: string[] }[];
   parts: string[];
   types: Map<string, TypeMeta>;
+  /** Nome do nível dentro de um tipo sem `inside`. */
+  detail: string;
 }
 
 type Preset = (typeof presets.notations)[keyof typeof presets.notations];
@@ -80,15 +84,40 @@ function toMeta(id: string, t: Partial<TypeDef>): TypeMeta {
   };
 }
 
-/** Preset de `notation` (c4 por padrão) mais os `types` do documento; um tipo próprio substitui o do preset. */
-export function resolveNotation(doc: Pick<ArchDoc, "notation" | "types">): Notation {
+interface PresetText {
+  label?: string;
+  description?: string;
+  root?: string;
+  summary?: string[];
+  types?: Record<string, { label?: string; inside?: string }>;
+}
+const TEXTS = translations as unknown as Record<string, Record<string, PresetText>>;
+
+/**
+ * Preset de `notation` (c4 por padrão) mais os `types` do documento; um tipo próprio substitui o do preset.
+ * Os textos do preset saem no idioma pedido (notations.json é o pt-BR); os tipos próprios ficam como o autor escreveu.
+ */
+export function resolveNotation(doc: Pick<ArchDoc, "notation" | "types">, lang: Lang = "pt-BR"): Notation {
   const name = doc.notation && PRESETS[doc.notation] ? doc.notation : DEFAULT_NOTATION;
   const p = PRESETS[name];
+  const tr: PresetText = (lang !== "pt-BR" && TEXTS[lang]?.[name]) || {};
   const types = new Map<string, TypeMeta>();
-  for (const [id, t] of Object.entries(p.types)) types.set(id, toMeta(id, t as Partial<TypeDef>));
+  for (const [id, t] of Object.entries(p.types)) types.set(id, toMeta(id, { ...(t as Partial<TypeDef>), ...tr.types?.[id] }));
   for (const t of doc.types ?? []) if (t?.id) types.set(t.id, toMeta(t.id, t));
-  return { name, label: p.label, description: p.description, root: p.root, direction: (p as { direction?: string }).direction === "RIGHT" ? "RIGHT" : "DOWN", summary: p.summary, parts: p.parts, types };
+  return {
+    name,
+    label: tr.label ?? p.label,
+    description: tr.description ?? p.description,
+    root: tr.root ?? p.root,
+    direction: (p as { direction?: string }).direction === "RIGHT" ? "RIGHT" : "DOWN",
+    summary: p.summary.map((s, i) => ({ ...s, label: tr.summary?.[i] ?? s.label })),
+    parts: p.parts,
+    types,
+    detail: DETAIL[lang],
+  };
 }
+
+const DETAIL: Record<Lang, string> = { "pt-BR": "Detalhe", en: "Detail", es: "Detalle" };
 
 /** Tipo desconhecido não quebra: cai num estilo neutro com o próprio id como rótulo. */
 export function typeMeta(n: Notation, type: string): TypeMeta {
@@ -98,7 +127,7 @@ export function typeMeta(n: Notation, type: string): TypeMeta {
 /** Nome do nível aberto (null = visão geral). */
 export function levelLabel(n: Notation, focusType: string | null): string {
   if (!focusType) return n.root;
-  return n.types.get(focusType)?.inside ?? "Detalhe";
+  return n.types.get(focusType)?.inside ?? n.detail;
 }
 
 /** Contadores do resumo: os do preset, ou os 3 tipos mais comuns quando o preset não cobre o documento. */

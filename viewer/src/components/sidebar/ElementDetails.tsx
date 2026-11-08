@@ -3,6 +3,7 @@ import { ArrowRight, ChevronRight, FileText, MessageCircle } from "lucide-react"
 import { typeMeta } from "../../lib/notation";
 import { descendants, hasChildren, statusOf, type Model } from "../../lib/model";
 import type { Relation } from "../../lib/types";
+import { useT } from "../../i18n";
 import { useStore } from "../../store";
 import { Button, SectionTitle, StatusPill } from "../ui";
 
@@ -11,6 +12,7 @@ export function ElementDetails({ id }: { id: string }) {
   const model = useStore((s) => s.model)!;
   const toggleExpanded = useStore((s) => s.toggleExpanded);
   const isOpen = useStore((s) => s.expanded.has(id));
+  const t = useT();
   const el = model.index.get(id);
   if (!el) return null;
 
@@ -39,7 +41,7 @@ export function ElementDetails({ id }: { id: string }) {
         {el.description && <p className="mt-1 leading-relaxed text-[#B7C0D0]">{el.description}</p>}
         {hasChildren(el) && (
           <Button variant="outline" size="sm" className="mt-1.5 self-start bg-[#161D2A]" onClick={() => toggleExpanded(el.id)}>
-            {isOpen ? "Fechar no diagrama" : `Abrir ${el.children!.length} ${el.children!.length === 1 ? "elemento interno" : "elementos internos"}`}{" "}
+            {isOpen ? t("side.closeInDiagram") : t("side.openChildren", el.children!.length)}{" "}
             <ChevronRight size={14} className={isOpen ? "-rotate-90" : ""} />
           </Button>
         )}
@@ -47,7 +49,7 @@ export function ElementDetails({ id }: { id: string }) {
 
       {(!!el.constraints?.length || el.notes) && (
         <section>
-          <SectionTitle>Restrições</SectionTitle>
+          <SectionTitle>{t("side.constraints")}</SectionTitle>
           <div className="rounded-xl border border-line bg-[#121824] px-3.5 py-3">
             {!!el.constraints?.length && (
               <ul className="flex flex-col gap-1.5">
@@ -67,7 +69,7 @@ export function ElementDetails({ id }: { id: string }) {
       )}
 
       <section>
-        <SectionTitle>Passos que tocam este elemento</SectionTitle>
+        <SectionTitle>{t("side.stepsTouching")}</SectionTitle>
         {steps.length ? (
           <ul className="flex flex-col">
             {steps.map(({ s, i }) => (
@@ -75,13 +77,13 @@ export function ElementDetails({ id }: { id: string }) {
             ))}
           </ul>
         ) : (
-          <p className="text-[13px] text-subtle">Nenhum passo toca este elemento.</p>
+          <p className="text-[13px] text-subtle">{t("side.noStepsTouching")}</p>
         )}
       </section>
 
       {rels.length > 0 && (
         <section>
-          <SectionTitle>Relações</SectionTitle>
+          <SectionTitle>{t("side.relations")}</SectionTitle>
           <ul className="flex flex-col gap-1.5">
             {rels.map((r, i) => (
               <RelationItem key={i} r={r} model={model} />
@@ -91,7 +93,7 @@ export function ElementDetails({ id }: { id: string }) {
       )}
 
       <Button variant="outline" onClick={comment}>
-        <MessageCircle size={15} /> Perguntar ou pedir mudança <kbd className="ml-1 text-[11px] text-subtle">C</kbd>
+        <MessageCircle size={15} /> {t("side.ask")} <kbd className="ml-1 text-[11px] text-subtle">C</kbd>
       </Button>
     </div>
   );

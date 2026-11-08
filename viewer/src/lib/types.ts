@@ -72,6 +72,8 @@ export interface ArchDoc {
   kind?: DocKind;
   /** Vocabulário de tipos (presets em notations.json); padrão c4. */
   notation?: string;
+  /** Idioma em que o documento foi escrito (pt-BR, en, es). O viewer usa o idioma de quem abre. */
+  lang?: string;
   types?: TypeDef[];
   /** Título; em kind: plan, plan também serve. */
   title?: string;

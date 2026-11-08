@@ -9,6 +9,7 @@ import { levelLabel } from "../../lib/notation";
 import { ancestors, docHasChanges, statusOf, type Model } from "../../lib/model";
 import type { ArchDoc } from "../../lib/types";
 import { computeView } from "../../lib/view";
+import { useLang, useT } from "../../i18n";
 import { useStore } from "../../store";
 import { cn, floating } from "../ui";
 import { BoundaryNode } from "./BoundaryNode";
@@ -24,6 +25,12 @@ const MIN_READABLE_ZOOM = 0.85;
 /** Zoom da câmera quando ela viaja de uma ponta à outra de um salto longo. */
 const TRAVEL_ZOOM = 1;
 const FIT_PADDING = { top: "84px", bottom: "72px", left: "32px", right: "32px" } as const;
+/**
+ * Enquadramento inicial. Precisa ser um objeto fixo: o React Flow copia esta prop para o store a cada
+ * mudança de referência, e isso sobrescreve as opções de um rf.fitView() que ainda está na fila
+ * (com saltos rápidos, a câmera enquadrava o diagrama inteiro em vez do salto).
+ */
+const INITIAL_FIT = { padding: FIT_PADDING, maxZoom: 1.2 };
 
 /** Só o que muda o tamanho/posição das caixas dispara um novo layout. */
 /** Posição absoluta de cada caixa (o React Flow guarda posição relativa ao pai). */
@@ -43,10 +50,11 @@ function absolutePositions(nodes: FlowNode[]) {
   return out;
 }
 
-function layoutKey(doc: ArchDoc, focus: string | null, expanded: ReadonlySet<string>) {
+/** O idioma entra porque muda a largura dos rótulos de seta ("3 relações"). */
+function layoutKey(doc: ArchDoc, focus: string | null, expanded: ReadonlySet<string>, lang: string) {
   const strip = (els: ArchDoc["elements"]): unknown =>
     els.map((e) => [e.id, e.name, e.tech, e.description, e.type, e.status, e.children ? strip(e.children) : 0]);
-  return JSON.stringify([focus, [...expanded].sort(), strip(doc.elements), doc.relations?.map((r) => [r.from, r.to, r.label, r.protocol, r.status])]);
+  return JSON.stringify([lang, focus, [...expanded].sort(), strip(doc.elements), doc.relations?.map((r) => [r.from, r.to, r.label, r.protocol, r.status])]);
 }
 
 export function Canvas() {
@@ -67,9 +75,11 @@ export function Canvas() {
   const camera = useStore((s) => s.camera);
   const toggleExpanded = useStore((s) => s.toggleExpanded);
   const rf = useReactFlow();
+  const t = useT();
 
   const view = useMemo(() => computeView(doc, model, focus, expanded), [doc, model, focus, expanded]);
-  const key = layoutKey(doc, focus, expanded);
+  const lang = useLang((s) => s.lang);
+  const key = layoutKey(doc, focus, expanded, lang);
   const [laid, setLaid] = useState<{ key: string; focus: string | null; nodes: FlowNode[]; edges: RelationFlowEdge[] } | null>(null);
   const [layoutError, setLayoutError] = useState<string | null>(null);
 
@@ -108,9 +118,15 @@ export function Canvas() {
     } else {
       const ids = [...new Set(cam.ids.map(view.toVisible).filter((x): x is string => !!x))];
       const trip = ++travel.current;
-      // espera o React Flow medir as caixas novas
-      setTimeout(() => {
+      // espera o React Flow medir as caixas novas: enquadrar antes disso cai no diagrama inteiro
+      const measured = () => ids.every((id) => !!rf.getInternalNode(id)?.measured.width);
+      let tries = 0;
+      const go = () => {
         if (trip !== travel.current) return;
+        if (!measured()) {
+          if (++tries < 20) setTimeout(go, 50);
+          return;
+        }
         const box = wrap.current?.getBoundingClientRect();
         const b = rf.getNodesBounds(ids);
         const zoom = box ? Math.min(box.width / (b.width * 1.7), box.height / (b.height * 1.7)) : 1;
@@ -120,7 +136,8 @@ export function Canvas() {
         }
         // as duas pontas não cabem legíveis: viaja da origem ao destino sem afastar a câmera
         void travelHop(ids[0], ids[1], trip);
-      }, 60);
+      };
+      setTimeout(go, 60);
     }
   };
   const travel = useRef(0);
@@ -210,7 +227,7 @@ export function Canvas() {
       <ReactFlow
         key={laid ? (laid.focus ?? "__root") : "__loading"}
         fitView
-        fitViewOptions={{ padding: FIT_PADDING, maxZoom: 1.2 }}
+        fitViewOptions={INITIAL_FIT}
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
@@ -254,9 +271,9 @@ export function Canvas() {
       <HopChips toVisible={view.toVisible} wrap={wrap} />
       {(layoutError || model.problems.length > 0) && (
         <div className="absolute inset-x-4 top-20 z-10 max-h-40 overflow-auto rounded-xl border border-[rgba(242,104,95,.35)] bg-[rgba(242,104,95,.1)] px-4 py-3 text-[13px] text-[#FFC9C4]">
-          <b>Problemas no documento</b>
+          <b>{t("canvas.problems")}</b>
           <ul className="mt-1 list-disc pl-5">
-            {layoutError && <li>Layout: {layoutError}</li>}
+            {layoutError && <li>{t("canvas.layoutError", layoutError)}</li>}
             {model.problems.map((p) => (
               <li key={p}>{p}</li>
             ))}
@@ -272,8 +289,9 @@ function Breadcrumbs({ model, focus }: { model: Model; focus: string | null }) {
   const chain = focus ? [...ancestors(model, focus).reverse(), focus] : [];
   const focusType = focus ? model.index.get(focus)!.type : null;
   const openCount = useStore((s) => s.expanded.size);
+  const t = useT();
   return (
-    <nav aria-label="Nível" className={cn(floating, "flex min-w-0 flex-wrap items-center gap-1 p-1 text-[13px]")}>
+    <nav aria-label={t("canvas.level")} className={cn(floating, "flex min-w-0 flex-wrap items-center gap-1 p-1 text-[13px]")}>
       <button
         type="button"
         onClick={() => setFocus(null)}
@@ -282,7 +300,7 @@ function Breadcrumbs({ model, focus }: { model: Model; focus: string | null }) {
           chain.length ? "text-muted hover:bg-hover hover:text-fg" : "bg-hover font-semibold text-fg",
         )}
       >
-        <Home size={14} /> Visão geral
+        <Home size={14} /> {t("canvas.overview")}
       </button>
       {chain.map((id, i) => {
         const el = model.index.get(id)!;
@@ -304,7 +322,7 @@ function Breadcrumbs({ model, focus }: { model: Model; focus: string | null }) {
         );
       })}
       <span className="ml-1.5 mr-1 rounded-md bg-[#161D2A] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[.04em] text-muted">
-        {!focus && openCount ? `${openCount} caixas abertas` : levelLabel(model.notation, focusType)}
+        {!focus && openCount ? t("canvas.openBoxes", openCount) : levelLabel(model.notation, focusType)}
       </span>
     </nav>
   );
@@ -316,6 +334,7 @@ function Toolbar({ changes }: { changes: boolean }) {
   const toggle = useStore((s) => s.toggleOnlyChanges);
   const expandChanged = useStore((s) => s.expandChanged);
   const collapseAll = useStore((s) => s.collapseAll);
+  const t = useT();
   const btn = "flex size-9 cursor-pointer items-center justify-center rounded-lg text-fg-2 transition hover:bg-hover hover:text-fg";
   return (
     <div className={cn(floating, "ml-auto flex items-center gap-1 p-1")}>
@@ -329,30 +348,30 @@ function Toolbar({ changes }: { changes: boolean }) {
           "flex h-9 cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[13px] font-medium transition",
           onlyChanges ? "bg-accent-bg text-accent-ink" : "text-fg-2 hover:bg-hover",
         )}
-        title="Apagar o que o plano não toca"
+        title={t("canvas.onlyChangesTitle")}
       >
-        <Filter size={14} /> Só mudanças
+        <Filter size={14} /> {t("canvas.onlyChanges")}
       </button>
-      <button type="button" className={btn} onClick={expandChanged} title="Abrir tudo que o plano muda" aria-label="Abrir tudo que o plano muda">
+      <button type="button" className={btn} onClick={expandChanged} title={t("canvas.expandChanged")} aria-label={t("canvas.expandChanged")}>
         <UnfoldVertical size={16} />
       </button>
         </>
       )}
-      <button type="button" className={btn} onClick={collapseAll} title="Fechar todas as caixas" aria-label="Fechar todas as caixas">
+      <button type="button" className={btn} onClick={collapseAll} title={t("canvas.collapseAll")} aria-label={t("canvas.collapseAll")}>
         <Shrink size={15} />
       </button>
       <span className="mx-1 h-5 w-px bg-line-strong" />
-      <button type="button" className={btn} onClick={() => rf.zoomOut({ duration: 200 })} aria-label="Diminuir zoom">
+      <button type="button" className={btn} onClick={() => rf.zoomOut({ duration: 200 })} aria-label={t("canvas.zoomOut")}>
         <Minus size={16} />
       </button>
-      <button type="button" className={btn} onClick={() => rf.zoomIn({ duration: 200 })} aria-label="Aumentar zoom">
+      <button type="button" className={btn} onClick={() => rf.zoomIn({ duration: 200 })} aria-label={t("canvas.zoomIn")}>
         <Plus size={16} />
       </button>
       <button
         type="button"
         className={btn}
         onClick={() => rf.fitView({ padding: FIT_PADDING, duration: 300, maxZoom: 1.2 })}
-        aria-label="Ajustar à tela"
+        aria-label={t("canvas.fit")}
       >
         <Maximize2 size={15} />
       </button>
@@ -361,6 +380,7 @@ function Toolbar({ changes }: { changes: boolean }) {
 }
 
 function Legend() {
+  const t = useT();
   return (
     <div className={cn(floating, "absolute bottom-4 left-4 z-10 flex flex-wrap items-center gap-x-3.5 gap-y-1.5 px-3.5 py-2 text-[12px] text-muted")}>
       {(["new", "changed", "removed"] as const).map((k) => (
@@ -373,7 +393,7 @@ function Legend() {
                 : { boxShadow: `0 0 0 2px ${STATUS_META[k].stroke}` }
             }
           />
-          {STATUS_META[k].label}
+          {t(`status.${k}`)}
         </span>
       ))}
     </div>
@@ -387,6 +407,7 @@ function FlowBanner({ insideNode }: { insideNode: string | null }) {
   const setHop = useStore((s) => s.setHop);
   const openFlow = useStore((s) => s.openFlow);
   const toggleExpanded = useStore((s) => s.toggleExpanded);
+  const t = useT();
   const fl = flow && doc.flows?.find((f) => f.id === flow.id);
   if (!fl || !flow) return null;
   const h = fl.hops[flow.hop];
@@ -401,13 +422,13 @@ function FlowBanner({ insideNode }: { insideNode: string | null }) {
           {flow.hop + 1}/{fl.hops.length}
         </span>
         <span className="ml-auto flex shrink-0 items-center gap-1">
-          <button type="button" className={btn} disabled={flow.hop === 0} onClick={() => setHop(flow.hop - 1)} aria-label="Salto anterior (←)">
+          <button type="button" className={btn} disabled={flow.hop === 0} onClick={() => setHop(flow.hop - 1)} aria-label={t("canvas.prevHop")}>
             <ChevronLeft size={15} />
           </button>
-          <button type="button" className={btn} disabled={flow.hop === fl.hops.length - 1} onClick={() => setHop(flow.hop + 1)} aria-label="Próximo salto (→)">
+          <button type="button" className={btn} disabled={flow.hop === fl.hops.length - 1} onClick={() => setHop(flow.hop + 1)} aria-label={t("canvas.nextHop")}>
             <ChevronRight size={15} />
           </button>
-          <button type="button" className={btn} onClick={() => openFlow(null)} aria-label="Fechar fluxo (Esc)">
+          <button type="button" className={btn} onClick={() => openFlow(null)} aria-label={t("canvas.closeFlow")}>
             <X size={14} />
           </button>
         </span>
@@ -420,9 +441,9 @@ function FlowBanner({ insideNode }: { insideNode: string | null }) {
       </div>
       {insideNode && (
         <div className="pl-[22px] text-[12px] text-white/80">
-          Acontece dentro de <b>{name(insideNode)}</b>.{" "}
+          {t("canvas.insideNode")} <b>{name(insideNode)}</b>.{" "}
           <button type="button" className="cursor-pointer underline" onClick={() => toggleExpanded(insideNode)}>
-            Abrir
+            {t("canvas.open")}
           </button>
         </div>
       )}
@@ -434,17 +455,18 @@ function StepBanner() {
   const doc = useStore((s) => s.doc)!;
   const pinned = useStore((s) => s.pinnedStep);
   const pin = useStore((s) => s.pinStep);
+  const t = useT();
   const idx = doc.steps?.findIndex((s) => s.id === pinned) ?? -1;
   if (idx < 0) return null;
   return (
     <div className="absolute left-1/2 top-[72px] z-10 flex -translate-x-1/2 items-center gap-2.5 rounded-full bg-accent py-1.5 pl-4 pr-1.5 text-[13px] text-white shadow-[0_8px_24px_rgba(0,0,0,.45)]">
-      <b>Passo {idx + 1}</b>
+      <b>{t("canvas.step", idx + 1)}</b>
       <span className="max-w-[44ch] truncate text-white/85">{doc.steps![idx].title}</span>
       <button
         type="button"
         onClick={() => pin(null)}
         className="flex size-7 cursor-pointer items-center justify-center rounded-full bg-white/15 hover:bg-white/25"
-        aria-label="Limpar destaque (Esc)"
+        aria-label={t("canvas.clearStep")}
       >
         <X size={14} />
       </button>
@@ -459,12 +481,13 @@ function HopChips({ toVisible, wrap }: { toVisible: (id: string) => string | nul
   const flow = useStore((s) => s.flow);
   const rf = useReactFlow();
   const vp = useViewport();
+  const t = useT();
   const box = wrap.current?.getBoundingClientRect();
   const h = flow && doc.flows?.find((f) => f.id === flow.id)?.hops[flow.hop];
   if (!h || !box) return null;
   const ends = [
-    { id: toVisible(h.from), prefix: "de", name: model.index.get(h.from)?.name ?? h.from },
-    { id: toVisible(h.to), prefix: "para", name: model.index.get(h.to)?.name ?? h.to },
+    { id: toVisible(h.from), prefix: t("canvas.hopFrom"), name: model.index.get(h.from)?.name ?? h.from },
+    { id: toVisible(h.to), prefix: t("canvas.hopTo"), name: model.index.get(h.to)?.name ?? h.to },
   ];
   if (!ends[0].id || ends[0].id === ends[1].id) return null;
   return (
@@ -496,7 +519,7 @@ function HopChips({ toVisible, wrap }: { toVisible: (id: string) => string | nul
             type="button"
             onClick={() => rf.setCenter(p.x + w / 2, p.y + hh / 2, { zoom: Math.max(vp.zoom, MIN_READABLE_ZOOM), duration: 600 })}
             className={cn(floating, "absolute z-10 flex max-w-[260px] cursor-pointer items-center gap-1.5 px-3 py-1.5 text-[12px] text-fg-2 transition hover:text-fg", pos)}
-            title={`Ir até ${e.name}`}
+            title={t("canvas.goTo", e.name)}
           >
             <Icon size={13} className="shrink-0 text-accent-ink" />
             <span className="min-w-0 truncate">

@@ -1,3 +1,4 @@
+import { t as tr } from "../i18n";
 // Formato do hash: #v1.<base64url(deflate-raw(json))>[~<id da view>]
 // Precisa continuar compatível com skills/blueroll/scripts/arch_url.py.
 import type { ArchDoc } from "./types";
@@ -44,8 +45,8 @@ export async function decodeHash(input: string): Promise<{ doc: unknown; focus: 
     h = h.slice(0, t);
   }
   const m = /^v(\d+)\.([\s\S]+)$/.exec(h.trim());
-  if (!m) throw new Error('Link sem prefixo de versão (esperado "#v1.…").');
-  if (Number(m[1]) !== VERSION) throw new Error(`Versão v${m[1]} não suportada por este viewer.`);
+  if (!m) throw new Error(tr("err.noPrefix"));
+  if (Number(m[1]) !== VERSION) throw new Error(tr("err.version", m[1]));
   const bytes = await pipe(b64urlToBytes(m[2]), new DecompressionStream("deflate-raw"));
   return { doc: JSON.parse(new TextDecoder().decode(bytes)), focus };
 }

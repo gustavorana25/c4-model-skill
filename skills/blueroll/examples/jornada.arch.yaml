@@ -2,6 +2,7 @@
 # Exemplo de notation: jornada. O caminho de um usuário até usar uma feature, com os pontos de saída.
 version: 1
 kind: system
+lang: pt-BR
 notation: jornada
 title: Do "tô com fome" ao entregador no mapa
 description: >
