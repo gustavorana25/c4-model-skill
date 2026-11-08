@@ -60,8 +60,23 @@ function labelSize(e: ViewEdge) {
   return { width, height: proto ? 34 : 22 };
 }
 
-/** direction: DOWN (padrão) ou RIGHT, para jornadas e processos que são uma corrente longa. */
-export async function layoutView(view: View, direction: "DOWN" | "RIGHT" = "DOWN"): Promise<{ nodes: FlowNode[]; edges: RelationFlowEdge[] }> {
+/**
+ * Relações em ciclo (SMS → usuário → app → SMS; "volta e olha outro restaurante"): o ELK precisa
+ * inverter uma seta para empilhar as camadas. Com DFS_NODE_ORDER ele percorre o grafo a partir dos
+ * nós na ordem do documento e inverte as setas que voltam, então quem vem antes no YAML fica antes
+ * no desenho. No layout hierárquico a opção vale por caixa: vai na raiz e em cada caixa aberta.
+ */
+const CYCLES = { "elk.layered.cycleBreaking.strategy": "DFS_NODE_ORDER" };
+
+/**
+ * direction: DOWN (padrão) ou RIGHT, para jornadas e processos que são uma corrente longa.
+ * order: ids na ordem do documento; o ELK recebe os nós nessa ordem (ver cycleBreaking).
+ */
+export async function layoutView(
+  view: View,
+  direction: "DOWN" | "RIGHT" = "DOWN",
+  order: string[] = [],
+): Promise<{ nodes: FlowNode[]; edges: RelationFlowEdge[] }> {
   const root: ElkNode = {
     id: "root",
     layoutOptions: {
@@ -75,6 +90,7 @@ export async function layoutView(view: View, direction: "DOWN" | "RIGHT" = "DOWN
       "elk.spacing.edgeEdge": "16",
       "elk.spacing.edgeLabel": "8",
       "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
+      ...CYCLES,
       "elk.padding": "[top=24,left=24,bottom=24,right=24]",
     },
     children: [],
@@ -82,7 +98,7 @@ export async function layoutView(view: View, direction: "DOWN" | "RIGHT" = "DOWN
   };
   const byId = new Map<string, ElkNode>([["root", root]]);
   for (const b of view.boundaries) {
-    const n: ElkNode = { id: b.id, children: [], layoutOptions: { "elk.padding": "[top=52,left=28,bottom=28,right=28]" } };
+    const n: ElkNode = { id: b.id, children: [], layoutOptions: { "elk.padding": "[top=52,left=28,bottom=28,right=28]", ...CYCLES } };
     const p = view.boundaryParent.get(b.id);
     (p ? byId.get(p)! : root).children!.push(n);
     byId.set(b.id, n);
@@ -90,6 +106,13 @@ export async function layoutView(view: View, direction: "DOWN" | "RIGHT" = "DOWN
   for (const { el, container } of view.nodes) {
     byId.get(container ?? "root")!.children!.push({ id: el.id, width: NODE_W, height: nodeHeight(el) });
   }
+  // caixas abertas e cards soltos misturados na ordem do documento, não "caixas primeiro"
+  const rank = new Map(order.map((id, i) => [id, i]));
+  const sortChildren = (n: ElkNode) => {
+    n.children?.sort((a, b) => (rank.get(a.id) ?? 1e9) - (rank.get(b.id) ?? 1e9));
+    n.children?.forEach(sortChildren);
+  };
+  sortChildren(root);
   for (const e of view.edges) {
     const edge: ElkExtendedEdge = {
       id: e.id,

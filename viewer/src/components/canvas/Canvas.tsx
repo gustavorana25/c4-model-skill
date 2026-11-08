@@ -85,7 +85,7 @@ export function Canvas() {
 
   useEffect(() => {
     let alive = true;
-    layoutView(view, model.notation.direction)
+    layoutView(view, model.notation.direction, [...model.index.keys()])
       .then((r) => alive && (setLaid({ key, focus: view.focus, ...r }), setLayoutError(null)))
       .catch((e: Error) => alive && setLayoutError(e.message));
     return () => {
