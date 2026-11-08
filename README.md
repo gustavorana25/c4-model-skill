@@ -88,3 +88,7 @@ python3 scripts/test_arch_url.py
 ```
 
 Os testes do viewer geram `viewer/src/lib/__fixtures__/pix.ts.hash.txt`, que o teste Python lê, e o Python gera `pix.python.hash.txt`, que o viewer lê. Assim os dois lados ficam presos ao mesmo formato.
+
+## Licença
+
+[MIT](LICENSE)

@@ -1,6 +1,7 @@
 {
   "name": "c4-plan",
   "private": true,
+  "license": "MIT",
   "description": "Atalhos: os comandos rodam no viewer/",
   "scripts": {
     "dev": "npm --prefix viewer run dev",
