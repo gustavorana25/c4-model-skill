@@ -6,6 +6,7 @@ import type { Relation } from "../../lib/types";
 import { useT } from "../../i18n";
 import { useStore } from "../../store";
 import { Button, SectionTitle, StatusPill } from "../ui";
+import { ZoomLink } from "../canvas/ZoomLink";
 
 export function ElementDetails({ id }: { id: string }) {
   const doc = useStore((s) => s.doc)!;
@@ -40,10 +41,18 @@ export function ElementDetails({ id }: { id: string }) {
         {el.path && <code className="self-start break-all font-mono text-[12px] text-fg-2">{el.path}</code>}
         {el.description && <p className="mt-1 leading-relaxed text-[#B7C0D0]">{el.description}</p>}
         {hasChildren(el) && (
-          <Button variant="outline" size="sm" className="mt-1.5 self-start bg-[#161D2A]" onClick={() => toggleExpanded(el.id)}>
-            {isOpen ? t("side.closeInDiagram") : t("side.openChildren", el.children!.length)}{" "}
-            <ChevronRight size={14} className={isOpen ? "-rotate-90" : ""} />
-          </Button>
+          <div className="mt-1.5 flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" className="bg-[#161D2A]" onClick={() => toggleExpanded(el.id)}>
+              {isOpen ? t("side.closeInDiagram") : t("side.openChildren", el.children!.length)}{" "}
+              <ChevronRight size={14} className={isOpen ? "-rotate-90" : ""} />
+            </Button>
+            <ZoomLink
+              id={el.id}
+              className="h-8 gap-2 rounded-[10px] bg-[#161D2A] px-2.5 text-[13px] font-medium text-fg-2 ring-1 ring-inset ring-line-strong transition-colors hover:bg-hover hover:text-fg"
+            >
+              {t("node.zoom")}
+            </ZoomLink>
+          </div>
         )}
       </div>
 

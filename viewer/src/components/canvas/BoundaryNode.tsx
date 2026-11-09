@@ -9,6 +9,7 @@ import { statusOf } from "../../lib/model";
 import { useT } from "../../i18n";
 import { useStore } from "../../store";
 import { cn } from "../ui";
+import { ZoomLink } from "./ZoomLink";
 
 /**
  * Caixa aberta. Duas origens: o caminho do foco (modo página) ou uma caixa aberta no lugar
@@ -51,9 +52,12 @@ export const BoundaryNode = memo(function BoundaryNode({ data }: NodeProps<Bound
           </span>
         </button>
         {open && (
+          <ZoomLink id={el.id} className="ml-auto size-5 justify-center rounded-full bg-[#1C2433] text-muted transition hover:bg-[#263045] hover:text-fg" />
+        )}
+        {open && (
           <button
             type="button"
-            className="nodrag ml-auto flex shrink-0 cursor-pointer items-center gap-0.5 rounded-full bg-[#1C2433] px-2 py-px text-[11px] font-semibold leading-[18px] text-muted transition hover:bg-[#263045] hover:text-fg"
+            className="nodrag flex shrink-0 cursor-pointer items-center gap-0.5 rounded-full bg-[#1C2433] px-2 py-px text-[11px] font-semibold leading-[18px] text-muted transition hover:bg-[#263045] hover:text-fg"
             onClick={(e) => {
               e.stopPropagation();
               toggleExpanded(el.id);

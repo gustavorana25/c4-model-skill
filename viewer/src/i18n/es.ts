@@ -88,6 +88,8 @@ export const es: Dict = {
   "canvas.goTo": (name: string) => `Ir a ${name}`,
   "node.open": "Abrir",
   "node.openTitle": "Abrir aquí, sin salir del diagrama (doble clic también)",
+  "node.zoom": "Ampliar",
+  "node.zoomTitle": "Ver solo lo de dentro, en su propia página, con el camino de vuelta (Ctrl+clic abre otra pestaña)",
   "node.close": "Cerrar",
   "node.closeTitle": "Cerrar esta caja",
   "node.details": (name: string) => `Ver detalles de ${name}`,

@@ -94,6 +94,8 @@ export const ptBR = {
   "canvas.goTo": (name: string) => `Ir até ${name}`,
   "node.open": "Abrir",
   "node.openTitle": "Abrir aqui, sem sair do diagrama (duplo clique também)",
+  "node.zoom": "Ampliar",
+  "node.zoomTitle": "Ver só o que tem dentro, em página própria, com o caminho para voltar (Ctrl+clique abre em outra aba)",
   "node.close": "Fechar",
   "node.closeTitle": "Fechar esta caixa",
   "node.details": (name: string) => `Ver detalhes de ${name}`,

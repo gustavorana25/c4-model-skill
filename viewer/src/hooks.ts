@@ -1,5 +1,5 @@
 import { dump } from "js-yaml";
-import { useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { buildHash, decodeHash, encodeDoc } from "./lib/codec";
 import { t } from "./i18n";
 import { useStore } from "./store";
@@ -13,6 +13,25 @@ export async function flushHash() {
   const h = buildHash(await encodeDoc(doc), focus);
   lastWritten = h;
   history.replaceState(null, "", h);
+  window.dispatchEvent(new Event(HASH_WRITTEN));
+}
+
+/** Avisa quem monta links a partir do hash (replaceState não dispara hashchange). */
+export const HASH_WRITTEN = "blueroll:hash";
+
+/** O hash atual da página, atualizado quando o viewer o regrava ou o usuário troca de link. */
+export function useLocationHash(): string {
+  return useSyncExternalStore(
+    (cb) => {
+      window.addEventListener(HASH_WRITTEN, cb);
+      window.addEventListener("hashchange", cb);
+      return () => {
+        window.removeEventListener(HASH_WRITTEN, cb);
+        window.removeEventListener("hashchange", cb);
+      };
+    },
+    () => location.hash,
+  );
 }
 
 async function loadFromHash() {

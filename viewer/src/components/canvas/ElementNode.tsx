@@ -10,6 +10,7 @@ import type { Status } from "../../lib/types";
 import { useT } from "../../i18n";
 import { useStore } from "../../store";
 import { cn, StatusPill } from "../ui";
+import { ZoomLink } from "./ZoomLink";
 
 const hidden = "!pointer-events-none !opacity-0 !min-h-0 !min-w-0 !size-1 !border-0";
 
@@ -66,9 +67,12 @@ export const ElementNode = memo(function ElementNode({ data }: NodeProps<Element
       <div className="mt-auto flex shrink-0 items-center gap-1.5 pt-2">
         {st !== "unchanged" && <StatusPill status={st} upper />}
         {hasChildren && (
+          <ZoomLink id={el.id} className="ml-auto rounded-full p-1 text-subtle transition hover:bg-[#22304A] hover:text-accent-ink" />
+        )}
+        {hasChildren && (
           <button
             type="button"
-            className="nodrag ml-auto flex cursor-pointer items-center gap-0.5 rounded-full bg-[#22304A] px-2 py-px text-[11px] font-semibold leading-[18px] text-accent-ink transition hover:bg-[#2B3C5C]"
+            className="nodrag flex cursor-pointer items-center gap-0.5 rounded-full bg-[#22304A] px-2 py-px text-[11px] font-semibold leading-[18px] text-accent-ink transition hover:bg-[#2B3C5C]"
             onClick={(e) => {
               e.stopPropagation();
               toggleExpanded(el.id);
