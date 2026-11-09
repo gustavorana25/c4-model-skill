@@ -212,6 +212,8 @@ def validate(doc) -> tuple[list[str], list[str]]:
                 warnings.append(m("sys_status", p=p, status=el["status"]))
             if "detail" in el:
                 warnings.append(m("old_detail", p=p))
+            if el.get("icon") and el["icon"] not in presets()["icons"]:
+                warnings.append(m("el_icon", p=p, icon=el["icon"]))
 
             ptype = parent.get("type") if parent else None
             allowed = types[etype]["parents"] if etype in types else {"*"}

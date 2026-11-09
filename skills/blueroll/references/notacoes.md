@@ -26,7 +26,9 @@ types:
     context: true      # ator ou peça de fora: o plano não implementa
 ```
 
-Outros campos: `inside` (nome do nível quando o diagrama abre o tipo), `openable` (avisar se algo novo desse tipo não tem children), `autoOpen: false` (começa fechado), `card` (base, raised, deep).
+Em qualquer elemento, `icon: <nome>` troca o ícone só daquele elemento.
+
+Outros campos de `types`: `inside` (nome do nível quando o diagrama abre o tipo), `openable` (avisar se algo novo desse tipo não tem children), `autoOpen: false` (começa fechado), `card` (base, raised, deep).
 
 ## O que muda entre notações
 

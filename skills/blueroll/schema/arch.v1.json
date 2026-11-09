@@ -152,6 +152,10 @@
           "type": "string",
           "description": "Arquivo no repositório (útil em code), ex.: src/payments/pix/create-charge.ts"
         },
+        "icon": {
+          "type": "string",
+          "description": "Ícone só deste elemento (um nome da lista icons em notations.json). Opcional: em c4 o viewer já infere o ícone de component e code pelo nome, tech e path (tabela, migração, repositório, evento, tela, controller) e, sem pista, pelo pai (component em database = tabela, em queue = evento)."
+        },
         "status": {
           "$ref": "#/$defs/status"
         },

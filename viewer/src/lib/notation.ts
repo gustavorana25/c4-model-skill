@@ -41,8 +41,11 @@ export interface TypeMeta {
   autoOpen: boolean;
   /** Nome do nível quando o diagrama está focado dentro deste tipo. */
   inside?: string;
-  /** Ícone inferido da tecnologia (web, mobile, API, worker). */
-  iconByTech: boolean;
+  /** Ícone inferido: false = nunca; "app" = da tecnologia (web, mobile, API, worker);
+   * "code" = também de nome e path (tabela, migração, repositório, evento, tela, controller). */
+  iconByTech: false | "app" | "code";
+  /** Ícone pelo tipo do pai quando nada acima decide (ex.: component dentro de database = tabela). */
+  iconByParent: Map<string, LucideIcon>;
 }
 
 export interface Notation {
@@ -68,6 +71,13 @@ export const NOTATION_NAMES = Object.keys(PRESETS);
 
 const color = (c: string | undefined) => (c && (COLORS[c] ?? (/^#[0-9a-f]{6}$/i.test(c) ? c : undefined))) ?? COLORS.gray;
 
+function iconRules(t: { iconByTech?: boolean | string; iconByParent?: Record<string, string> }) {
+  const by = t.iconByTech === "code" ? "code" : t.iconByTech ? "app" : false;
+  const parent = new Map<string, LucideIcon>();
+  for (const [p, name] of Object.entries(t.iconByParent ?? {})) if (ICONS[name]) parent.set(p, ICONS[name]);
+  return { iconByTech: by as TypeMeta["iconByTech"], iconByParent: parent };
+}
+
 function toMeta(id: string, t: Partial<TypeDef>): TypeMeta {
   return {
     id,
@@ -80,7 +90,7 @@ function toMeta(id: string, t: Partial<TypeDef>): TypeMeta {
     openable: !!t.openable,
     autoOpen: t.autoOpen ?? true,
     inside: t.inside,
-    iconByTech: !!(t as { iconByTech?: boolean }).iconByTech,
+    ...iconRules(t as { iconByTech?: boolean | string; iconByParent?: Record<string, string> }),
   };
 }
 

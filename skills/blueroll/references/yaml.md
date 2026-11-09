@@ -20,5 +20,6 @@ Salve ao lado do plano como `<nome-do-plano>.arch.yaml`.
 - Hierarquia: `person`, `system`, `external` na raiz; `container`, `database`, `queue` dentro de `system` (ou na raiz); `component` dentro de `container`, `database` (tabela, migração) ou `queue` (evento); `code` só dentro de `component`.
 - **Tudo que o plano cria ou altera abre até o código.** Todo `system`, `container`, `database`, `queue` e `component` com `status` `new`/`changed` tem `children`, descendo até `code` (o `validate` avisa quando falta). O que não muda fica fechado: é contexto.
 - Nível 4 (`code`): os arquivos, classes, módulos ou funções que o plano cria ou altera, com `path` preenchido. Arquivo que já existe e muda é `status: changed`. Liste o que muda, não o código todo do componente (2 a 4 por componente costuma bastar).
+- Ícones de `component` e `code`: o viewer deduz o ícone do nome, do `tech` e do `path`. Por isso, use nomes que digam o que a peça é: "Tabela users", `ChallengeRepository`, `OrderPaid event`, `CheckoutPage`, `OrderController`, `db/migrations/x.sql`. Quando o nome não dá pista, o ícone vem do pai: component dentro de `database` vira tabela, dentro de `queue` vira evento. Só use `icon: <nome>` (da lista `icons` em `notations.json`) quando a dedução errar.
 
 Nas outras notações, desça só até onde ajuda a entender (veja `references/notacoes.md`).

@@ -11,6 +11,8 @@ export interface ArchElement {
   tech?: string;
   /** Arquivo no repositório; usado principalmente em code (nível 4). */
   path?: string;
+  /** Ícone deste elemento (nome da lista icons em notations.json); vence o do tipo e o inferido. */
+  icon?: string;
   status?: Status;
   constraints?: string[];
   notes?: string;
