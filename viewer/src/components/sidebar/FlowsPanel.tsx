@@ -1,9 +1,10 @@
 import { Route } from "lucide-react";
+import { useMemo } from "react";
 import { hopLabel, hopRelation } from "../../lib/flow";
 import { isSystemDoc, statusOf } from "../../lib/model";
 import { STATUS_META } from "../../lib/meta";
 import { useT } from "../../i18n";
-import { useStore } from "../../store";
+import { flowSteps, useStore } from "../../store";
 import { cn } from "../ui";
 
 /** Fluxos: como o sistema funciona depois do plano, salto a salto. */
@@ -15,6 +16,11 @@ export function FlowsPanel() {
   const setHop = useStore((s) => s.setHop);
   const follow = useStore((s) => s.followFlow);
   const toggleFollow = useStore((s) => s.toggleFollowFlow);
+  // passos do fluxo aberto: com as caixas fechadas, saltos seguidos no mesmo card andam juntos
+  const focus = useStore((s) => s.focus);
+  const expanded = useStore((s) => s.expanded);
+  const steps = useMemo(() => flowSteps({ doc, model, flow, followFlow: follow, focus, expanded }), [doc, model, flow, follow, focus, expanded]);
+  const cur = flow && steps?.find(([a, b]) => flow.hop >= a && flow.hop <= b);
   const t = useT();
   const flows = doc.flows ?? [];
   const name = (id: string) => model.index.get(id)?.name ?? id;
@@ -54,25 +60,30 @@ export function FlowsPanel() {
               <div className="pb-2">
                 {f.description && <p className="mx-3 mb-2 ml-[50px] text-[12.5px] text-muted">{f.description}</p>}
                 <ol className="flex flex-col">
-                  {f.hops.map((h, i) => {
-                    const cur = flow!.hop === i;
+                  {(steps ?? f.hops.map((_, i): [number, number] => [i, i])).map(([a, b]) => (
+                  <li key={a} className={cn(b > a && "mx-2 my-0.5 overflow-hidden rounded-lg ring-1 ring-inset ring-[#2B3B5C]")}>
+                  <ol className="flex flex-col">
+                  {f.hops.slice(a, b + 1).map((h, j) => {
+                    const i = a + j;
+                    const on = !!cur && cur[0] === a;
                     const st = statusOf(hopRelation(doc, h)?.rel ?? {});
                     return (
                       <li key={i}>
                         <button
                           type="button"
                           onClick={() => setHop(i)}
-                          aria-current={cur ? "step" : undefined}
+                          aria-current={on ? "step" : undefined}
                           className={cn(
                             "flex w-full cursor-pointer items-start gap-2.5 px-3 py-1.5 text-left text-[12.5px] transition",
-                            cur ? "bg-accent-bg" : "hover:bg-hover",
-                            i > flow!.hop && "opacity-55",
+                            b > a ? "px-2" : "",
+                            on ? "bg-accent-bg" : "hover:bg-hover",
+                            !!cur && a > cur[1] && "opacity-55",
                           )}
                         >
                           <span
                             className={cn(
                               "mt-px flex size-[22px] shrink-0 items-center justify-center rounded-full text-[11px] font-bold tabular-nums",
-                              cur ? "bg-accent text-white" : "bg-hover text-fg-2",
+                              on ? "bg-accent text-white" : "bg-hover text-fg-2",
                             )}
                           >
                             {i + 1}
@@ -90,6 +101,9 @@ export function FlowsPanel() {
                       </li>
                     );
                   })}
+                  </ol>
+                  </li>
+                  ))}
                 </ol>
               </div>
             )}

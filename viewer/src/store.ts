@@ -2,7 +2,8 @@ import { create } from "zustand";
 import { EMBED } from "./embed";
 import { useLang } from "./i18n";
 import { buildModel, hasChildren, isWithin, parseDoc, titleOf, type Model } from "./lib/model";
-import { defaultExpanded, revealing } from "./lib/view";
+import { computeView, defaultExpanded, revealing } from "./lib/view";
+import { groupOf, hopGroups } from "./lib/flow";
 import type { ArchDoc } from "./lib/types";
 
 export type Selection = { kind: "el" | "edge"; id: string } | null;
@@ -49,7 +50,10 @@ interface State {
   select: (sel: Selection) => void;
   pinStep: (id: string | null) => void;
   openFlow: (id: string | null, hop?: number) => void;
+  /** Vai para o passo que contém o salto `hop`. */
   setHop: (hop: number) => void;
+  /** Passo seguinte (+1) ou anterior (-1). */
+  stepHop: (dir: 1 | -1) => void;
   toggleFollowFlow: () => void;
   toggleExpanded: (id: string) => void;
   expandChanged: () => void;
@@ -149,12 +153,25 @@ export const useStore = create<State>((set, get) => ({
     const fl = flow && doc?.flows?.find((x) => x.id === flow.id);
     if (!fl || !model || !doc) return;
     const i = Math.max(0, Math.min(hop, fl.hops.length - 1));
-    if (!followFlow) return set({ flow: { id: fl.id, hop: i } });
+    if (!followFlow) {
+      // caixas como estão: saltos seguidos no mesmo card viram um passo, e a câmera vai até os cards dele
+      const [s0, s1] = groupOf(flowSteps(get())!, i);
+      const ids = [fl.hops[s0].from, ...fl.hops.slice(s0, s1 + 1).map((h) => h.to)];
+      return set({ flow: { id: fl.id, hop: s1 }, camera: { kind: "hop", ids, at: Date.now() } });
+    }
     // abre as caixas até as duas pontas do salto aparecerem, e enquadra o salto
     const h = fl.hops[i];
     const expanded = revealing(model, revealing(model, get().expanded, h.from), h.to);
     const out = focus && !isWithin(model, h.from, focus) && !isWithin(model, h.to, focus);
     set({ flow: { id: fl.id, hop: i }, expanded, focus: out ? null : focus, camera: { kind: "hop", ids: [h.from, h.to], at: Date.now() } });
+  },
+  stepHop: (dir) => {
+    const st = get();
+    if (!st.flow) return;
+    const steps = flowSteps(st)!;
+    const k = steps.findIndex(([a, b]) => st.flow!.hop >= a && st.flow!.hop <= b);
+    const next = steps[Math.max(0, Math.min(steps.length - 1, k + dir))];
+    if (next) st.setHop(next[0]);
   },
   toggleFollowFlow: () => {
     set((s) => ({ followFlow: !s.followFlow }));
@@ -172,3 +189,14 @@ useLang.subscribe((st, prev) => {
   const { doc, model } = useStore.getState();
   if (doc && model) useStore.setState({ model: buildModel(doc, st.lang) });
 });
+
+/**
+ * Passos do fluxo aberto, [primeiro, último salto]. Com "abrir as caixas" ligado, cada salto é um passo;
+ * desligado, saltos seguidos que caem no mesmo card fechado (ou na mesma seta) viram um só.
+ */
+export function flowSteps(s: Pick<State, "doc" | "model" | "flow" | "followFlow" | "focus" | "expanded">): [number, number][] | null {
+  const fl = s.flow && s.doc?.flows?.find((x) => x.id === s.flow!.id);
+  if (!fl || !s.model || !s.doc) return null;
+  if (s.followFlow) return fl.hops.map((_, i) => [i, i]);
+  return hopGroups(computeView(s.doc, s.model, s.focus, s.expanded), fl.hops);
+}

@@ -22,8 +22,8 @@ export interface FlowMarks {
   insideNode: string | null;
 }
 
-/** Marcas do fluxo aberto até o salto `upto` (0-based) nesta view. */
-export function flowMarks(doc: ArchDoc, view: View, flowId: string, upto: number): FlowMarks | null {
+/** Marcas do fluxo aberto até o salto `upto` (0-based) nesta view. O passo atual vai de `from` a `upto` (saltos agrupados). */
+export function flowMarks(doc: ArchDoc, view: View, flowId: string, upto: number, from = upto): FlowMarks | null {
   const flow = doc.flows?.find((f) => f.id === flowId);
   if (!flow) return null;
   const marks: FlowMarks = { edgeNums: new Map(), activeEdges: new Set(), activeNodes: new Set(), litNodes: new Set(), insideNode: null };
@@ -34,12 +34,14 @@ export function flowMarks(doc: ArchDoc, view: View, flowId: string, upto: number
     if (b) marks.litNodes.add(b);
     for (const e of hopEdges(view, h)) {
       marks.edgeNums.set(e.id, [...(marks.edgeNums.get(e.id) ?? []), i + 1]);
-      if (i === upto) marks.activeEdges.add(e.id);
+      if (i >= from) marks.activeEdges.add(e.id);
     }
-    if (i === upto) {
+    if (i >= from) {
       if (a) marks.activeNodes.add(a);
       if (b) marks.activeNodes.add(b);
-      if (a && a === b) marks.insideNode = a;
+      // o passo inteiro acontece dentro de uma caixa só
+      if (i === from) marks.insideNode = a && a === b ? a : null;
+      else if (marks.insideNode && !(a === marks.insideNode && b === marks.insideNode)) marks.insideNode = null;
     }
   });
   return marks;

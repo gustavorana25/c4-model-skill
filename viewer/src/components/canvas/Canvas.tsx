@@ -2,6 +2,7 @@ import { Background, BackgroundVariant, MiniMap, ReactFlow, useReactFlow, useVie
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronLeft, ChevronRight, Filter, Home, Maximize2, Minus, Plus, Route, Shrink, UnfoldVertical, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { hopLabel } from "../../lib/flow";
+import type { Hop } from "../../lib/types";
 import { computeDimmer, flowMarks } from "../../lib/highlight";
 import { layoutView, type FlowNode, type RelationFlowEdge } from "../../lib/layout";
 import { STATUS_META } from "../../lib/meta";
@@ -11,7 +12,7 @@ import type { ArchDoc } from "../../lib/types";
 import { computeView } from "../../lib/view";
 import { useLang, useT } from "../../i18n";
 import { EMBED } from "../../embed";
-import { useStore } from "../../store";
+import { flowSteps, useStore } from "../../store";
 import { cn, floating } from "../ui";
 import { BoundaryNode } from "./BoundaryNode";
 import { CommentComposer } from "./CommentComposer";
@@ -72,6 +73,7 @@ export function Canvas() {
   const commentTargets = useStore((s) => s.commentTargets);
   const toggleTarget = useStore((s) => s.toggleCommentTarget);
   const flow = useStore((s) => s.flow);
+  const followFlow = useStore((s) => s.followFlow);
   const expanded = useStore((s) => s.expanded);
   const camera = useStore((s) => s.camera);
   const toggleExpanded = useStore((s) => s.toggleExpanded);
@@ -188,7 +190,17 @@ export function Canvas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [laid]);
 
-  const marks = useMemo(() => (flow ? flowMarks(doc, view, flow.id, flow.hop) : null), [doc, view, flow]);
+  // passo atual do fluxo: com as caixas fechadas, saltos seguidos no mesmo card são um passo só
+  const step = useMemo(() => {
+    const steps = flowSteps({ doc, model, flow, followFlow, focus, expanded });
+    if (!steps || !flow) return null;
+    const k = Math.max(0, steps.findIndex(([a, b]) => flow.hop >= a && flow.hop <= b));
+    return { k, n: steps.length, range: steps[k] };
+  }, [doc, model, flow, followFlow, focus, expanded]);
+  const marks = useMemo(
+    () => (flow ? flowMarks(doc, view, flow.id, flow.hop, step?.range[0]) : null),
+    [doc, view, flow, step],
+  );
   const dimmer = useMemo(
     () => computeDimmer(doc, model, view, pinnedStep, onlyChanges, marks),
     [doc, model, view, pinnedStep, onlyChanges, marks],
@@ -272,7 +284,7 @@ export function Canvas() {
         <>
           <CommentComposer />
           <StepBanner />
-          <FlowBanner insideNode={marks?.insideNode ?? null} />
+          <FlowBanner insideNode={marks?.insideNode ?? null} step={step} />
           <HopChips toVisible={view.toVisible} wrap={wrap} />
         </>
       )}
@@ -409,11 +421,11 @@ function Legend() {
   );
 }
 
-function FlowBanner({ insideNode }: { insideNode: string | null }) {
+function FlowBanner({ insideNode, step }: { insideNode: string | null; step: { k: number; n: number; range: [number, number] } | null }) {
   const doc = useStore((s) => s.doc)!;
   const model = useStore((s) => s.model)!;
   const flow = useStore((s) => s.flow);
-  const setHop = useStore((s) => s.setHop);
+  const stepHop = useStore((s) => s.stepHop);
   const openFlow = useStore((s) => s.openFlow);
   const toggleExpanded = useStore((s) => s.toggleExpanded);
   const t = useT();
@@ -431,11 +443,10 @@ function FlowBanner({ insideNode }: { insideNode: string | null }) {
       ro.disconnect();
       host.style.removeProperty("--flow-banner-bottom");
     };
-  }, [flow?.id, flow?.hop]);
+  }, [flow?.id, flow?.hop, step?.range[0]]);
   const fl = flow && doc.flows?.find((f) => f.id === flow.id);
-  if (!fl || !flow) return null;
-  const h = fl.hops[flow.hop];
-  const label = hopLabel(doc, h);
+  if (!fl || !flow || !step) return null;
+  const hops: Hop[] = fl.hops.slice(step.range[0], step.range[1] + 1);
   const name = (id: string) => model.index.get(id)?.name ?? id;
   const btn = "flex size-7 cursor-pointer items-center justify-center rounded-full bg-white/15 hover:bg-white/25 disabled:cursor-default disabled:opacity-40";
   return (
@@ -444,13 +455,13 @@ function FlowBanner({ insideNode }: { insideNode: string | null }) {
         <Route size={14} className="shrink-0" />
         <b className="min-w-0 truncate">{fl.title}</b>
         <span className="shrink-0 tabular-nums text-white/75">
-          {flow.hop + 1}/{fl.hops.length}
+          {step.k + 1}/{step.n}
         </span>
         <span className="ml-auto flex shrink-0 items-center gap-1">
-          <button type="button" className={btn} disabled={flow.hop === 0} onClick={() => setHop(flow.hop - 1)} aria-label={t("canvas.prevHop")}>
+          <button type="button" className={btn} disabled={step.k === 0} onClick={() => stepHop(-1)} aria-label={t("canvas.prevHop")}>
             <ChevronLeft size={15} />
           </button>
-          <button type="button" className={btn} disabled={flow.hop === fl.hops.length - 1} onClick={() => setHop(flow.hop + 1)} aria-label={t("canvas.nextHop")}>
+          <button type="button" className={btn} disabled={step.k === step.n - 1} onClick={() => stepHop(1)} aria-label={t("canvas.nextHop")}>
             <ChevronRight size={15} />
           </button>
           <button type="button" className={btn} onClick={() => openFlow(null)} aria-label={t("canvas.closeFlow")}>
@@ -459,10 +470,23 @@ function FlowBanner({ insideNode }: { insideNode: string | null }) {
         </span>
       </div>
       {/* a relação numa linha; a descrição embaixo, quebrando em quantas linhas precisar */}
-      <div className="min-w-0 pl-[22px] font-semibold">
-        {name(h.from)} → {name(h.to)}
-      </div>
-      {label && <div className="min-w-0 break-words pl-[22px] leading-[18px] text-white/85">{label}</div>}
+      {/* cada salto do passo: a relação numa linha, a descrição embaixo, quebrando em quantas linhas precisar */}
+      <ol className={cn("flex flex-col gap-1.5", hops.length > 2 && "-mr-2 max-h-[140px] overflow-y-auto pr-2")}>
+        {hops.map((h, i) => {
+          const label = hopLabel(doc, h);
+          return (
+            <li key={i} className="flex min-w-0 gap-2 pl-[22px]">
+              {hops.length > 1 && <span className="shrink-0 pt-px tabular-nums text-white/65">{step.range[0] + i + 1}.</span>}
+              <span className="min-w-0">
+                <span className="block font-semibold">
+                  {name(h.from)} → {name(h.to)}
+                </span>
+                {label && <span className="block break-words leading-[18px] text-white/85">{label}</span>}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
       {insideNode && (
         <div className="pl-[22px] text-[12px] text-white/80">
           {t("canvas.insideNode")} <b>{name(insideNode)}</b>.{" "}

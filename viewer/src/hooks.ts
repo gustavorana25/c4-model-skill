@@ -70,7 +70,7 @@ export function useKeyboard() {
       if (!s.doc) return;
       if (s.flow && (ev.key === "ArrowRight" || ev.key === "ArrowLeft")) {
         ev.preventDefault();
-        s.setHop(s.flow.hop + (ev.key === "ArrowRight" ? 1 : -1));
+        s.stepHop(ev.key === "ArrowRight" ? 1 : -1);
         return;
       }
       if (ev.key === "Escape") {
