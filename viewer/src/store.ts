@@ -124,9 +124,19 @@ export const useStore = create<State>((set, get) => ({
     });
   },
   toggleExpanded: (id) => {
-    const { model: m, expanded } = get();
+    const { model: m, expanded, focus } = get();
     const el = m?.index.get(id);
     if (!el || !hasChildren(el)) return;
+    // vizinho de fora do nível aberto (ex.: outra raia ao lado): sobe até o nível dele e abre lá
+    if (focus && id !== focus && !isWithin(m!, id, focus)) {
+      set({
+        focus: m!.parent.get(id) ?? null,
+        selected: null,
+        expanded: new Set(expanded).add(id),
+        camera: { kind: "anchor", ids: [id], at: Date.now() },
+      });
+      return;
+    }
     const next = new Set(expanded);
     if (next.has(id)) {
       next.delete(id);
