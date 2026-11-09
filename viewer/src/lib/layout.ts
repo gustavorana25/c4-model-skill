@@ -43,7 +43,7 @@ const elk = new ELK();
 export function nodeHeight(el: ArchElement): number {
   const usable = NODE_W - 28;
   const nameLines = Math.max(1, Math.ceil((el.name.length * 8.4) / usable));
-  const descLines = el.description ? Math.min(2, Math.ceil((el.description.length * 6.5) / usable)) : 0;
+  const descLines = el.description ? Math.min(4, Math.ceil((el.description.length * 6.5) / usable)) : 0;
   const badges = el.status && el.status !== "unchanged" ? true : hasChildren(el);
   return 24 + 16 + 4 + nameLines * 19 + (descLines ? 4 + descLines * 16 : 0) + (badges ? 30 : 4);
 }

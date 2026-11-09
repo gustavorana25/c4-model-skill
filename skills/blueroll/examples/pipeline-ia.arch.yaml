@@ -1,0 +1,146 @@
+# yaml-language-server: $schema=../schema/arch.v1.json
+# Exemplo de notation: processo, informativo (kind: system), com tipos próprios para quem executa cada etapa.
+version: 1
+kind: system
+notation: processo
+lang: pt-BR
+title: Pipeline de desenvolvimento guiado por IA
+description: >
+  Da task ao código: a thread principal entende a demanda e escreve o plano, subagentes
+  levantam contexto, revisam e desenham o plano, o humano valida pelo diagrama e
+  subagentes desenvolvem.
+
+# Raias são as fases; o tipo de cada card diz quem executa a etapa.
+types:
+  - id: thread
+    label: Thread principal
+    icon: messages-square
+    color: blue
+  - id: subagente
+    label: Subagente
+    icon: bot
+    color: teal
+  - id: humano
+    label: Humano
+    icon: user
+    color: indigo
+
+elements:
+  - id: fase-contexto
+    type: raia
+    name: Contexto
+    description: Entender o que a task pede e o que o código tem hoje
+    children:
+      - id: inicio
+        type: humano
+        name: Inicia a task
+        description: Escolhe a task e pede para a thread principal começar
+
+      - id: entender
+        type: thread
+        name: Entender a demanda
+        description: Lê a task e os critérios de aceite e decide quais repositórios entram
+        constraints:
+          - Sair desta etapa com a lista de repositórios afetados
+
+      - id: contexto
+        type: subagente
+        name: Levantar contexto
+        description: Um subagente por repositório, em paralelo; grep e leitura do que a task toca
+        constraints:
+          - Devolver um resumo por repositório, não o conteúdo dos arquivos
+
+  - id: repos
+    type: sistema
+    name: Repositórios afetados
+    description: O código que a task toca
+
+  - id: fase-plano
+    type: raia
+    name: Plano
+    description: Escrever, revisar e validar o plano antes de qualquer código
+    children:
+      - id: planejar
+        type: thread
+        name: Gerar o plano
+        tech: skill potato mode
+        description: Escreve o plano a partir da demanda e do contexto dos repositórios
+
+      - id: plano
+        type: documento
+        name: Plano de implementação
+        description: Passos, arquivos e decisões; é o que o review e o diagrama leem
+
+      - id: review
+        type: subagente
+        name: Revisar o plano
+        description: Procura lacunas, riscos e passos fora de ordem
+
+      - id: diagrama
+        type: subagente
+        name: Gerar o diagrama C4
+        tech: skill blueroll
+        description: Escreve o arch.yaml do plano e gera o link do viewer
+
+      - id: validar
+        type: humano
+        name: Plano aprovado?
+        description: Olha o diagrama, comenta no viewer e aprova no chat
+        constraints:
+          - Só o humano aprova, e só no chat
+
+  - id: fase-execucao
+    type: raia
+    name: Execução
+    description: Implementar o plano aprovado e testar
+    children:
+      - id: implementar
+        type: subagente
+        name: Implementar
+        description: Um subagente por repositório ou por passo independente, em paralelo, a partir do brief
+        constraints:
+          - Seguir o brief gerado do diagrama aprovado
+
+      - id: testar
+        type: subagente
+        name: Testar
+        description: Testes e checagens de cada repositório
+
+      - id: fim
+        type: fim
+        name: Pronto para PR
+
+relations:
+  - { from: inicio, to: entender, label: passa a task }
+  - { from: entender, to: contexto, label: repositórios afetados }
+  - { from: contexto, to: repos, label: grep e leitura }
+  - { from: contexto, to: planejar, label: contexto de cada repositório }
+  - { from: planejar, to: plano, label: escreve }
+  - { from: plano, to: review, label: plano para revisar }
+  - { from: review, to: planejar, label: apontamentos }
+  - { from: review, to: diagrama, label: plano revisado }
+  - { from: diagrama, to: validar, label: link do diagrama }
+  - { from: validar, to: planejar, label: "não: pede mudanças" }
+  - { from: validar, to: implementar, label: "sim: aprovado no chat" }
+  - { from: implementar, to: repos, label: altera o código }
+  - { from: implementar, to: testar }
+  - { from: testar, to: implementar, label: falhou }
+  - { from: testar, to: fim, label: passou }
+
+flows:
+  - id: caminho-feliz
+    title: Da task ao PR
+    description: O caminho principal, do humano iniciando a task até o PR. As voltas (review com apontamentos, plano reprovado, teste falhando) aparecem como setas no diagrama.
+    hops:
+      - { from: inicio, to: entender, label: humano inicia a task na thread principal }
+      - { from: entender, to: contexto, label: manda um subagente por repositório }
+      - { from: contexto, to: repos, label: grep e leitura do que a task toca }
+      - { from: contexto, to: planejar, label: devolve um resumo por repositório }
+      - { from: planejar, to: plano, label: escreve o plano com o potato mode }
+      - { from: plano, to: review, label: um subagente revisa o plano }
+      - { from: review, to: diagrama, label: "sem apontamentos, segue para o diagrama" }
+      - { from: diagrama, to: validar, label: blueroll gera o diagrama C4 e o humano valida }
+      - { from: validar, to: implementar, label: aprova no chat }
+      - { from: implementar, to: repos, label: subagentes implementam em paralelo }
+      - { from: implementar, to: testar, label: roda os testes }
+      - { from: testar, to: fim, label: "tudo verde, pronto para PR" }
