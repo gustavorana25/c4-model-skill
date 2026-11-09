@@ -42,7 +42,7 @@ O codec existe em dois lugares, [`src/lib/codec.ts`](src/lib/codec.ts) e [`skill
 <iframe src="https://gustavorana25.github.io/c4-model-skill/?embed#v1.…" width="100%" height="520" style="border:0"></iframe>
 ```
 
-Ficam as ações do diagrama: zoom, mover, enquadrar, abrir e fechar caixas, e o caminho de níveis quando o link abre dentro de uma caixa (`~id`). Saem seleção, comentários, passos, fluxos, minimapa, o filtro "Só mudanças" e a ponte `window.blueroll`. O `encode --embed` gera o link. O código fica em [`src/embed.ts`](src/embed.ts).
+Ficam as ações do diagrama: zoom, mover, enquadrar, abrir e fechar caixas (um clique no card abre o nível de dentro), e o caminho de níveis quando o link abre dentro de uma caixa (`~id`). Saem seleção, comentários, passos, fluxos, minimapa, o filtro "Só mudanças" e a ponte `window.blueroll`. O `encode --embed` gera o link. O código fica em [`src/embed.ts`](src/embed.ts).
 
 ## Notações
 

@@ -199,7 +199,7 @@ export function Canvas() {
       (laid?.nodes ?? []).map((n): FlowNode => {
         const el = model.index.get(n.id) ?? n.data.el;
         if (n.type === "boundary") return { ...n, data: { ...n.data, el } };
-        return { ...n, data: { ...n.data, el, dim: dimmer.node(n.id), selected: selected?.kind === "el" && selected.id === n.id, commentTarget: commentTargets.includes(n.id), flowActive: !!marks?.activeNodes.has(n.id) } };
+        return { ...n, className: EMBED && n.data.hasChildren ? "can-open" : undefined, data: { ...n.data, el, dim: dimmer.node(n.id), selected: selected?.kind === "el" && selected.id === n.id, commentTarget: commentTargets.includes(n.id), flowActive: !!marks?.activeNodes.has(n.id) } };
       }),
     [laid, model, dimmer, selected, commentTargets, marks],
   );
@@ -241,8 +241,9 @@ export function Canvas() {
         minZoom={0.1}
         maxZoom={2.5}
         proOptions={{ hideAttribution: true }}
-        onNodeClick={EMBED ? undefined : (_, n) => n.type === "element" && (commenting ? toggleTarget(n.id) : select({ kind: "el", id: n.id }))}
-        onNodeDoubleClick={(_, n) => n.type === "element" && n.data.hasChildren && toggleExpanded(n.id)}
+        // no iframe não há painel de detalhes: um clique no card abre ou fecha o nível de dentro
+        onNodeClick={(_, n) => n.type === "element" && (EMBED ? n.data.hasChildren && toggleExpanded(n.id) : commenting ? toggleTarget(n.id) : select({ kind: "el", id: n.id }))}
+        onNodeDoubleClick={EMBED ? undefined : (_, n) => n.type === "element" && n.data.hasChildren && toggleExpanded(n.id)}
         onEdgeClick={EMBED ? undefined : (_, e) => !commenting && select({ kind: "edge", id: e.id })}
         onPaneClick={EMBED ? undefined : () => !commenting && select(null)}
       >
@@ -416,13 +417,29 @@ function FlowBanner({ insideNode }: { insideNode: string | null }) {
   const openFlow = useStore((s) => s.openFlow);
   const toggleExpanded = useStore((s) => s.toggleExpanded);
   const t = useT();
+  // a descrição quebra em várias linhas, então a altura muda: o chip "de/para" de cima fica logo abaixo
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = box.current;
+    const host = el?.parentElement;
+    if (!el || !host) return;
+    const measure = () => host.style.setProperty("--flow-banner-bottom", `${el.offsetTop + el.offsetHeight}px`);
+    measure(); // a cada salto; o observer cobre mudanças de largura da tela
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      host.style.removeProperty("--flow-banner-bottom");
+    };
+  }, [flow?.id, flow?.hop]);
   const fl = flow && doc.flows?.find((f) => f.id === flow.id);
   if (!fl || !flow) return null;
   const h = fl.hops[flow.hop];
+  const label = hopLabel(doc, h);
   const name = (id: string) => model.index.get(id)?.name ?? id;
   const btn = "flex size-7 cursor-pointer items-center justify-center rounded-full bg-white/15 hover:bg-white/25 disabled:cursor-default disabled:opacity-40";
   return (
-    <div className="absolute left-1/2 top-[72px] z-10 flex w-[min(640px,calc(100%-32px))] -translate-x-1/2 flex-col gap-1 rounded-2xl bg-accent px-3 py-2 text-[13px] text-white shadow-[0_8px_24px_rgba(0,0,0,.45)]">
+    <div ref={box} className="absolute left-1/2 top-[72px] z-10 flex w-[min(640px,calc(100%-32px))] -translate-x-1/2 flex-col gap-1 rounded-2xl bg-accent px-3 py-2 text-[13px] text-white shadow-[0_8px_24px_rgba(0,0,0,.45)]">
       <div className="flex items-center gap-2">
         <Route size={14} className="shrink-0" />
         <b className="min-w-0 truncate">{fl.title}</b>
@@ -441,12 +458,11 @@ function FlowBanner({ insideNode }: { insideNode: string | null }) {
           </button>
         </span>
       </div>
-      <div className="flex min-w-0 items-baseline gap-1.5 pl-[22px]">
-        <span className="shrink-0 font-semibold">
-          {name(h.from)} → {name(h.to)}
-        </span>
-        <span className="min-w-0 truncate text-white/85">{hopLabel(doc, h)}</span>
+      {/* a relação numa linha; a descrição embaixo, quebrando em quantas linhas precisar */}
+      <div className="min-w-0 pl-[22px] font-semibold">
+        {name(h.from)} → {name(h.to)}
       </div>
+      {label && <div className="min-w-0 break-words pl-[22px] leading-[18px] text-white/85">{label}</div>}
       {insideNode && (
         <div className="pl-[22px] text-[12px] text-white/80">
           {t("canvas.insideNode")} <b>{name(insideNode)}</b>.{" "}
@@ -519,7 +535,7 @@ function HopChips({ toVisible, wrap }: { toVisible: (id: string) => string | nul
           : right
             ? "right-4 top-1/2 -translate-y-1/2 flex-row-reverse"
             : above
-              ? "left-1/2 top-[150px] -translate-x-1/2"
+              ? "left-1/2 top-[calc(var(--flow-banner-bottom,138px)+12px)] -translate-x-1/2"
               : "bottom-20 left-1/2 -translate-x-1/2";
         return (
           <button
