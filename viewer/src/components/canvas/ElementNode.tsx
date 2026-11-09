@@ -63,7 +63,7 @@ export const ElementNode = memo(function ElementNode({ data }: NodeProps<Element
           {el.tech ? ` · ${el.tech}` : ""}
         </span>
       </div>
-      <div className={cn("mt-1 shrink-0 text-[14.5px] font-semibold leading-[19px] text-fg", st === "removed" && "line-through")}>{el.name}</div>
+      <div className={cn("mt-1 shrink-0 break-words text-[14.5px] font-semibold leading-[19px] text-fg", st === "removed" && "line-through")}>{el.name}</div>
       {el.description && <div className="mt-1 line-clamp-4 shrink-0 text-[12px] leading-4 text-muted">{el.description}</div>}
       {hasFooter(st, hasChildren) && (
       <div className="mt-auto flex shrink-0 items-center gap-1.5 pt-2">
