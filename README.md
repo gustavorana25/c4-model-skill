@@ -44,7 +44,13 @@ Ask it to **download** the files, not just read the URL: the link is generated b
 
 ## Install
 
-Copy the [`skills/blueroll/`](skills/blueroll/) folder into your agent's skills folder. In Claude Code, for example, use `.claude/skills/` in the project or `~/.claude/skills/` for all projects:
+With [skills](https://github.com/vercel-labs/skills), which asks which agent to install for (Claude Code, Codex, Cursor and others) and whether it goes in the project or in all projects:
+
+```bash
+npx skills@latest add gustavorana25/c4-model-skill --skill=blueroll
+```
+
+Or copy the [`skills/blueroll/`](skills/blueroll/) folder into your agent's skills folder. In Claude Code, for example, use `.claude/skills/` in the project or `~/.claude/skills/` for all projects:
 
 ```bash
 git clone https://github.com/gustavorana25/c4-model-skill.git && cp -r c4-model-skill/skills/blueroll ~/.claude/skills/
