@@ -67,6 +67,8 @@ export interface TypeDef {
   openable?: boolean;
   autoOpen?: boolean;
   inside?: string;
+  /** Marca d’água do card: cylinder ou queue. */
+  mark?: "cylinder" | "queue";
 }
 
 export interface ArchDoc {

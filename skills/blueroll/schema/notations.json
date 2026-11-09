@@ -1,5 +1,5 @@
 {
-  "$comment": "Presets de notação do Blueroll. Lido por scripts/arch_url.py e importado pelo viewer no build: um lugar só. parents: tipos onde o elemento pode ficar (null = raiz, \"*\" = em qualquer lugar). context: ator ou peça de fora (não é implementado pelo plano). openable: se o plano cria ou altera, precisa ter children. autoOpen: false = começa fechado mesmo quando muda. inside: nome do nível quando o diagrama está focado dentro deste tipo. direction (na notação): RIGHT desenha da esquerda para a direita (padrão DOWN). iconByTech: troca o ícone pelo que a tecnologia sugere (true: web, mobile, API, worker; \"code\": também tabela, migração, repositório, evento, tela, controller, olhando nome, tech e path). iconByParent: ícone quando nada acima decide, pelo tipo do pai (ex.: componente dentro de database vira tabela).",
+  "$comment": "Presets de notação do Blueroll. Lido por scripts/arch_url.py e importado pelo viewer no build: um lugar só. parents: tipos onde o elemento pode ficar (null = raiz, \"*\" = em qualquer lugar). context: ator ou peça de fora (não é implementado pelo plano). openable: se o plano cria ou altera, precisa ter children. autoOpen: false = começa fechado mesmo quando muda. inside: nome do nível quando o diagrama está focado dentro deste tipo. direction (na notação): RIGHT desenha da esquerda para a direita (padrão DOWN). iconByTech: troca o ícone pelo que a tecnologia sugere (true: web, mobile, API, worker; \"code\": também tabela, migração, repositório, evento, tela, controller, olhando nome, tech e path). mark: desenho do tipo, apagado no canto de cima do card (cylinder para banco, queue para fila). iconByParent: ícone quando nada acima decide, pelo tipo do pai (ex.: componente dentro de database vira tabela).",
   "colors": {
     "indigo": "#9DB8FF",
     "blue": "#8FB0FF",
@@ -39,8 +39,8 @@
         "system": { "label": "Sistema", "icon": "boxes", "color": "blue", "parents": [null], "context": true, "openable": true, "inside": "Nível 2 · Containers" },
         "external": { "label": "Sistema externo", "icon": "globe", "color": "gray", "parents": [null], "context": true },
         "container": { "label": "Container", "icon": "box", "color": "azure", "parents": [null, "system"], "openable": true, "iconByTech": true, "inside": "Nível 3 · Componentes" },
-        "database": { "label": "Banco", "icon": "database", "color": "teal", "parents": [null, "system"], "openable": true, "inside": "Nível 3 · Componentes" },
-        "queue": { "label": "Fila", "icon": "messages-square", "color": "teal", "parents": [null, "system"], "openable": true, "inside": "Nível 3 · Componentes" },
+        "database": { "label": "Banco", "icon": "database", "color": "teal", "mark": "cylinder", "parents": [null, "system"], "openable": true, "inside": "Nível 3 · Componentes" },
+        "queue": { "label": "Fila", "icon": "messages-square", "color": "teal", "mark": "queue", "parents": [null, "system"], "openable": true, "inside": "Nível 3 · Componentes" },
         "component": { "label": "Componente", "icon": "puzzle", "color": "sky", "card": "raised", "parents": ["container", "database", "queue"], "iconByTech": "code", "iconByParent": { "database": "table", "queue": "zap" }, "openable": true, "autoOpen": false, "inside": "Nível 4 · Código" },
         "code": { "label": "Código", "icon": "file-code", "color": "violet", "card": "deep", "parents": ["component"], "iconByTech": "code" }
       }
@@ -89,8 +89,8 @@
         "borda": { "label": "Borda / gateway", "icon": "router", "color": "cyan", "parents": [null, "nuvem", "regiao", "rede"] },
         "servico": { "label": "Serviço", "icon": "server", "color": "azure", "parents": [null, "nuvem", "regiao", "rede", "cluster"] },
         "funcao": { "label": "Função", "icon": "zap", "color": "azure", "parents": [null, "nuvem", "regiao", "rede"] },
-        "banco": { "label": "Banco", "icon": "database", "color": "teal", "parents": [null, "nuvem", "regiao", "rede", "cluster"] },
-        "fila": { "label": "Fila", "icon": "messages-square", "color": "teal", "parents": [null, "nuvem", "regiao", "rede", "cluster"] },
+        "banco": { "label": "Banco", "icon": "database", "color": "teal", "mark": "cylinder", "parents": [null, "nuvem", "regiao", "rede", "cluster"] },
+        "fila": { "label": "Fila", "icon": "messages-square", "color": "teal", "mark": "queue", "parents": [null, "nuvem", "regiao", "rede", "cluster"] },
         "storage": { "label": "Armazenamento", "icon": "hard-drive", "color": "teal", "parents": [null, "nuvem", "regiao", "rede", "cluster"] },
         "segredo": { "label": "Segredo", "icon": "key", "color": "pink", "parents": [null, "nuvem", "regiao", "rede", "cluster"] }
       }
@@ -154,7 +154,7 @@
         "ator": { "label": "Ator", "icon": "user", "color": "indigo", "parents": ["*"], "context": true },
         "grupo": { "label": "Grupo", "icon": "folder", "color": "blue", "parents": ["*"] },
         "item": { "label": "Item", "icon": "square", "color": "azure", "parents": ["*"] },
-        "dado": { "label": "Dado", "icon": "database", "color": "teal", "parents": ["*"] },
+        "dado": { "label": "Dado", "icon": "database", "color": "teal", "mark": "cylinder", "parents": ["*"] },
         "externo": { "label": "Externo", "icon": "globe", "color": "gray", "parents": ["*"], "context": true }
       }
     }

@@ -104,3 +104,20 @@ describe("exemplos das notações novas", () => {
     expect(computeView(doc, m, null, defaultExpanded(m)).nodes.length).toBeGreaterThan(0);
   });
 });
+
+describe("mark (marca d’água do card)", () => {
+  test("banco e fila têm desenho; o resto não", () => {
+    const c4 = resolveNotation({});
+    expect(typeMeta(c4, "database").mark).toBe("cylinder");
+    expect(typeMeta(c4, "queue").mark).toBe("queue");
+    expect(typeMeta(c4, "container").mark).toBeUndefined();
+    const infra = resolveNotation({ notation: "infra" });
+    expect(typeMeta(infra, "banco").mark).toBe("cylinder");
+    expect(typeMeta(infra, "fila").mark).toBe("queue");
+  });
+  test("tipo próprio pode pedir a marca; valor desconhecido é ignorado", () => {
+    const n = resolveNotation({ notation: "livre", types: [{ id: "cache", label: "Cache", mark: "cylinder" }, { id: "x", label: "X", mark: "nada" as never }] });
+    expect(typeMeta(n, "cache").mark).toBe("cylinder");
+    expect(typeMeta(n, "x").mark).toBeUndefined();
+  });
+});

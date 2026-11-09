@@ -312,6 +312,11 @@
           "type": "string",
           "description": "Nome de ícone da lista icons em notations.json (ex.: server, user, zap). Padrão: square."
         },
+        "mark": {
+          "type": "string",
+          "enum": ["cylinder", "queue"],
+          "description": "Desenho do tipo, apagado no canto de cima do card: cylinder (banco, dado guardado) ou queue (fila, tópico)."
+        },
         "color": {
           "type": "string",
           "description": "Nome de cor de notations.json (indigo, blue, azure, sky, teal, cyan, violet, pink, gray) ou #RRGGBB."

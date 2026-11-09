@@ -24,6 +24,9 @@ export const ICONS: Record<string, LucideIcon> = {
   tag: Tag, terminal: Terminal, user: User, users: Users, workflow: Workflow, wrench: Wrench, zap: Zap,
 };
 
+/** Desenho do tipo, apagado no canto do card (marca d’água). */
+export type TypeMark = "cylinder" | "queue";
+
 export interface TypeMeta {
   id: string;
   label: string;
@@ -46,6 +49,8 @@ export interface TypeMeta {
   iconByTech: false | "app" | "code";
   /** Ícone pelo tipo do pai quando nada acima decide (ex.: component dentro de database = tabela). */
   iconByParent: Map<string, LucideIcon>;
+  /** Marca d’água do card: cylinder (banco) ou queue (fila). */
+  mark?: TypeMark;
 }
 
 export interface Notation {
@@ -90,6 +95,7 @@ function toMeta(id: string, t: Partial<TypeDef>): TypeMeta {
     openable: !!t.openable,
     autoOpen: t.autoOpen ?? true,
     inside: t.inside,
+    mark: t.mark === "cylinder" || t.mark === "queue" ? t.mark : undefined,
     ...iconRules(t as { iconByTech?: boolean | string; iconByParent?: Record<string, string> }),
   };
 }

@@ -10,6 +10,7 @@ import type { Status } from "../../lib/types";
 import { useT } from "../../i18n";
 import { useStore } from "../../store";
 import { cn, StatusPill } from "../ui";
+import { TypeMark } from "./TypeMark";
 import { ZoomLink } from "./ZoomLink";
 
 const hidden = "!pointer-events-none !opacity-0 !min-h-0 !min-w-0 !size-1 !border-0";
@@ -41,7 +42,7 @@ export const ElementNode = memo(function ElementNode({ data }: NodeProps<Element
   return (
     <div
       className={cn(
-        "relative flex h-full w-full flex-col rounded-xl border px-3.5 py-3 transition-[opacity,box-shadow] duration-200",
+        "relative isolate flex h-full w-full flex-col rounded-xl border px-3.5 py-3 transition-[opacity,box-shadow] duration-200",
         selected ? "border-accent" : "border-[#273042]",
         recede && st === "unchanged" && !selected && "opacity-[.8]",
         dim && "!opacity-[.16]",
@@ -54,6 +55,7 @@ export const ElementNode = memo(function ElementNode({ data }: NodeProps<Element
       }}
     >
       <Handle type="target" position={Position.Top} className={hidden} />
+      {T.mark && <TypeMark kind={T.mark} color={T.ink} />}
       <div className="flex h-4 shrink-0 items-center gap-1.5 text-[11px] font-semibold uppercase leading-4 tracking-[.04em]" style={{ color: T.ink }}>
         <ElementIcon el={el} size={12} strokeWidth={2.2} className="shrink-0" />
         <span className="truncate">
