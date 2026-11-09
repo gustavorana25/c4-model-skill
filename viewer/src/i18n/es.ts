@@ -55,6 +55,7 @@ export const es: Dict = {
   "err.noPrefix": 'Enlace sin prefijo de versión (se esperaba "#v1.…").',
   "err.version": (v: string) => `La versión v${v} no es compatible con este visor.`,
   "err.link": (msg: string) => `No pude abrir el plan de este enlace: ${msg}`,
+  "embed.empty": "No hay diagrama en este enlace.",
   "prob.noId": "Elemento sin id.",
   "prob.dupId": (id: string) => `id duplicado: ${id}`,
   "prob.version": (v: string) => `version esperada: 1 (recibido: ${v})`,

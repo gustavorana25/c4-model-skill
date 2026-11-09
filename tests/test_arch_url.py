@@ -170,6 +170,9 @@ check("toda notação tem tradução en e es", all(
 M = __import__("messages").MESSAGES
 check("mensagens com as mesmas chaves nos 3 idiomas", set(M["en"]) == set(M["pt-BR"]) == set(M["es"]))
 
+check("--embed acrescenta ?embed", A.with_embed("https://h/x/") == "https://h/x/?embed")
+check("--embed respeita query existente", A.with_embed("https://h/?a=1") == "https://h/?a=1&embed")
+
 # sem jsonschema, itens que não são objeto viram erro (e não AttributeError)
 _js = sys.modules.get("jsonschema")
 sys.modules["jsonschema"] = None  # import jsonschema -> ImportError

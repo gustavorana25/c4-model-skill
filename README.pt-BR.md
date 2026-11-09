@@ -20,6 +20,7 @@ A mesma skill também documenta um sistema que já existe, para onboarding ou pa
 - **Restrições explícitas.** O que a implementação precisa respeitar ("idempotência por txid", "migração sem lock de tabela").
 - **Outras notações.** `processo` (raias, etapas, decisões), `infra` (nuvem, região, rede, cluster), `dominio` (contextos, agregados, eventos), `jornada` (caminho do usuário até uma feature), `livre`, e tipos próprios no YAML. Veja [`references/notacoes.md`](skills/blueroll/references/notacoes.md).
 - **Português, inglês e espanhol.** O viewer segue o idioma do navegador (com um seletor no cabeçalho). O campo `lang` do YAML define o idioma do brief e das mensagens de validação.
+- **Dentro de uma página.** O `encode --embed` gera um link que mostra só o diagrama (zoom, mover, abrir caixas), para um `<iframe>` numa wiki ou página de documentação.
 - **Um brief para a execução.** Depois da sua aprovação, a IA gera um Markdown com a estrutura e as restrições e segue esse documento enquanto implementa.
 
 ![Um fluxo aberto, salto a salto, descendo até o código](docs/prints/fluxo.jpg)

@@ -34,6 +34,16 @@ O estado inteiro vai no `#hash`, que **não é enviado ao servidor**.
 
 O codec existe em dois lugares, [`src/lib/codec.ts`](src/lib/codec.ts) e [`skills/blueroll/scripts/arch_url.py`](../skills/blueroll/scripts/arch_url.py), e um teste prende os dois ao mesmo formato. Os testes do viewer geram `src/lib/__fixtures__/pix.ts.hash.txt`, que o teste Python lê, e o Python gera `pix.python.hash.txt`, que o viewer lê.
 
+## Modo iframe
+
+`?embed` antes do `#hash` mostra só o diagrama, sem cabeçalho nem painel lateral, para colocar num `<iframe>` (wiki, docs, Notion):
+
+```html
+<iframe src="https://gustavorana25.github.io/c4-model-skill/?embed#v1.…" width="100%" height="520" style="border:0"></iframe>
+```
+
+Ficam as ações do diagrama: zoom, mover, enquadrar, abrir e fechar caixas, e o caminho de níveis quando o link abre dentro de uma caixa (`~id`). Saem seleção, comentários, passos, fluxos, minimapa, o filtro "Só mudanças" e a ponte `window.blueroll`. O `encode --embed` gera o link. O código fica em [`src/embed.ts`](src/embed.ts).
+
 ## Notações
 
 Os tipos de caixa (rótulo, ícone, cor, aninhamento, nome dos níveis) vêm de [`skills/blueroll/schema/notations.json`](../skills/blueroll/schema/notations.json), que o viewer importa no build e o `arch_url.py` lê. [`src/lib/notation.ts`](src/lib/notation.ts) junta o preset de `notation` com os `types` do documento; os componentes só usam `typeMeta()` e `levelLabel()`. Ícone novo entra em `icons` no JSON e no mapa `ICONS` do `notation.ts` (um teste confere que os dois batem).

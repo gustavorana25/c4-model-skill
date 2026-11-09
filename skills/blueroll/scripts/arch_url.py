@@ -13,7 +13,7 @@ tipos do preset saem traduzidos (schema/notations.i18n.json); os types próprios
 
 Uso:
   arch_url.py validate <arquivo.yaml|json>
-  arch_url.py encode   <arquivo.yaml|json> [--base URL | --local]
+  arch_url.py encode   <arquivo.yaml|json> [--base URL | --local] [--embed]
   arch_url.py decode   <url|#hash|payload> [-o saida.yaml] [--json]
   arch_url.py brief    <arquivo.yaml|url> [-o saida.md]
 
@@ -520,6 +520,11 @@ def default_base() -> str:
     return os.environ.get("BLUEROLL_VIEWER_URL") or os.environ.get("C4PLAN_VIEWER_URL") or PUBLIC_VIEWER_URL
 
 
+def with_embed(base: str) -> str:
+    """Liga o modo iframe (?embed): o viewer mostra só o diagrama, sem cabeçalho nem painel."""
+    return base + ("&" if "?" in base else "?") + "embed"
+
+
 def local_base() -> str:
     """Build local (viewer/dist/index.html), para testar mudanças no viewer antes de publicar."""
     if not VIEWER_PATH.exists():
@@ -551,6 +556,7 @@ def main() -> None:
     e.add_argument("file")
     e.add_argument("--base", help=f"URL do viewer (padrão: $BLUEROLL_VIEWER_URL ou {PUBLIC_VIEWER_URL})")
     e.add_argument("--local", action="store_true", help="usa o build local viewer/dist/index.html")
+    e.add_argument("--embed", action="store_true", help="link para <iframe>: só o diagrama, sem cabeçalho nem painel")
 
     d = sub.add_parser("decode", help="converte URL/hash de volta para YAML")
     d.add_argument("url")
@@ -590,7 +596,8 @@ def main() -> None:
         if a.cmd == "validate":
             print(msg(L, "ok", n=len(warnings)))
             return
-        url = (a.base or (local_base() if a.local else default_base())) + "#" + encode_payload(doc)
+        base = a.base or (local_base() if a.local else default_base())
+        url = (with_embed(base) if a.embed else base) + "#" + encode_payload(doc)
         print(url)
         print(msg(L, "chars", n=len(url)), file=sys.stderr)
         return

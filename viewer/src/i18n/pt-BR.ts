@@ -60,6 +60,7 @@ export const ptBR = {
   "err.noPrefix": 'Link sem prefixo de versão (esperado "#v1.…").',
   "err.version": (v: string) => `Versão v${v} não suportada por este viewer.`,
   "err.link": (msg: string) => `Não consegui abrir o plano deste link: ${msg}`,
+  "embed.empty": "Sem diagrama neste link.",
   "prob.noId": "Elemento sem id.",
   "prob.dupId": (id: string) => `id duplicado: ${id}`,
   "prob.version": (v: string) => `version esperada: 1 (recebido: ${v})`,

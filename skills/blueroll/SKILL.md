@@ -48,7 +48,7 @@ Processo, infra, domínio ou jornada usam os mesmos playbooks (`revisar-plano` p
 | Comando | Faz |
 |---|---|
 | `validate <arquivo>` | Só valida. |
-| `encode <arquivo>` | Valida e imprime o link. Erros impedem o link; avisos não. |
+| `encode <arquivo>` | Valida e imprime o link. Erros impedem o link; avisos não. Com `--embed`, o link é para um `<iframe>` (só o diagrama: zoom, mover, abrir caixas). |
 | `decode "<link>" [-o arquivo.yaml] [--json]` | Converte um link de volta para YAML (ou JSON). |
 | `brief <arquivo> -o <saida>.md` | Plano: o brief de execução. Sistema: a documentação em Markdown. |
 

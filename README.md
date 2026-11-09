@@ -22,6 +22,7 @@ The same skill also documents an existing system, for onboarding or for getting 
 - **Explicit constraints.** What the implementation must respect ("idempotency by txid", "migration without table lock").
 - **Other notations.** `processo` (lanes, steps, decisions), `infra` (cloud, region, network, cluster), `dominio` (contexts, aggregates, events), `jornada` (user journey to a feature), `livre`, and custom types in the YAML. See [`references/notacoes.md`](skills/blueroll/references/notacoes.md).
 - **English, Portuguese and Spanish.** The viewer follows your browser's language (with a switcher in the header). The YAML's `lang` field sets the language of the brief and the validation messages.
+- **Embed in a page.** `encode --embed` makes a link that shows only the diagram (zoom, pan, open boxes), for an `<iframe>` in a wiki or docs page.
 - **A brief for execution.** After you approve, the AI generates a Markdown file with the structure and constraints and follows it while implementing.
 
 ![A flow opened hop by hop, drilling down to code](docs/prints/fluxo.jpg)

@@ -7,7 +7,8 @@ import { Toast } from "./components/Toast";
 import { TopBar } from "./components/TopBar";
 import { useHashSync, useKeyboard } from "./hooks";
 import { titleOf } from "./lib/model";
-import { useLang } from "./i18n";
+import { EMBED } from "./embed";
+import { useLang, useT } from "./i18n";
 import { useStore } from "./store";
 
 export default function App() {
@@ -22,6 +23,8 @@ export default function App() {
   useEffect(() => {
     document.title = doc ? `${titleOf(doc)} · Blueroll` : "Blueroll";
   }, [doc]);
+
+  if (EMBED) return <EmbedApp />;
 
   return (
     <div className="flex h-full flex-col">
@@ -39,6 +42,26 @@ export default function App() {
         <EmptyState />
       )}
       <Toast />
+    </div>
+  );
+}
+
+/** Modo iframe: só o diagrama. Sem documento, uma linha com o erro do link (ou nada). */
+function EmbedApp() {
+  const doc = useStore((s) => s.doc);
+  const loadError = useStore((s) => s.loadError);
+  const t = useT();
+  return (
+    <div className="embed h-full">
+      {doc ? (
+        <ReactFlowProvider>
+          <Canvas />
+        </ReactFlowProvider>
+      ) : (
+        <div className="flex h-full items-center justify-center p-6 text-center text-[13px] text-muted">
+          {loadError ?? t("embed.empty")}
+        </div>
+      )}
     </div>
   );
 }

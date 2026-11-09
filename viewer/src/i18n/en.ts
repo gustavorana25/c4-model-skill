@@ -55,6 +55,7 @@ export const en: Dict = {
   "err.noPrefix": 'Link without a version prefix (expected "#v1.…").',
   "err.version": (v: string) => `Version v${v} is not supported by this viewer.`,
   "err.link": (msg: string) => `Couldn't open the plan from this link: ${msg}`,
+  "embed.empty": "No diagram in this link.",
   "prob.noId": "Element without an id.",
   "prob.dupId": (id: string) => `duplicate id: ${id}`,
   "prob.version": (v: string) => `expected version: 1 (got: ${v})`,

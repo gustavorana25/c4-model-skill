@@ -10,6 +10,7 @@ import { ancestors, docHasChanges, statusOf, type Model } from "../../lib/model"
 import type { ArchDoc } from "../../lib/types";
 import { computeView } from "../../lib/view";
 import { useLang, useT } from "../../i18n";
+import { EMBED } from "../../embed";
 import { useStore } from "../../store";
 import { cn, floating } from "../ui";
 import { BoundaryNode } from "./BoundaryNode";
@@ -240,13 +241,13 @@ export function Canvas() {
         minZoom={0.1}
         maxZoom={2.5}
         proOptions={{ hideAttribution: true }}
-        onNodeClick={(_, n) => n.type === "element" && (commenting ? toggleTarget(n.id) : select({ kind: "el", id: n.id }))}
+        onNodeClick={EMBED ? undefined : (_, n) => n.type === "element" && (commenting ? toggleTarget(n.id) : select({ kind: "el", id: n.id }))}
         onNodeDoubleClick={(_, n) => n.type === "element" && n.data.hasChildren && toggleExpanded(n.id)}
-        onEdgeClick={(_, e) => !commenting && select({ kind: "edge", id: e.id })}
-        onPaneClick={() => !commenting && select(null)}
+        onEdgeClick={EMBED ? undefined : (_, e) => !commenting && select({ kind: "edge", id: e.id })}
+        onPaneClick={EMBED ? undefined : () => !commenting && select(null)}
       >
         <Background variant={BackgroundVariant.Dots} gap={22} size={1.2} color="#1F2736" bgColor="#0B0F16" />
-        <MiniMap
+        {!EMBED && <MiniMap
           position="bottom-right"
           pannable
           zoomable
@@ -258,17 +259,22 @@ export function Canvas() {
             n.type === "boundary" ? "rgba(44,53,71,.45)" : STATUS_META[statusOf((n.data as { el: { status?: never } }).el)].stroke
           }
           nodeBorderRadius={6}
-        />
+        />}
       </ReactFlow>
       <div className="pointer-events-none absolute inset-x-4 top-4 z-10 flex flex-wrap items-start justify-between gap-2 [&>*]:pointer-events-auto">
-        <Breadcrumbs model={model} focus={focus} />
+        {/* no iframe, o caminho só aparece quando o link abre num nível de dentro (~id) */}
+        {(!EMBED || focus) && <Breadcrumbs model={model} focus={focus} />}
         <Toolbar changes={changes} />
       </div>
       {changes && <Legend />}
-      <CommentComposer />
-      <StepBanner />
-      <FlowBanner insideNode={marks?.insideNode ?? null} />
-      <HopChips toVisible={view.toVisible} wrap={wrap} />
+      {!EMBED && (
+        <>
+          <CommentComposer />
+          <StepBanner />
+          <FlowBanner insideNode={marks?.insideNode ?? null} />
+          <HopChips toVisible={view.toVisible} wrap={wrap} />
+        </>
+      )}
       {(layoutError || model.problems.length > 0) && (
         <div className="absolute inset-x-4 top-20 z-10 max-h-40 overflow-auto rounded-xl border border-[rgba(242,104,95,.35)] bg-[rgba(242,104,95,.1)] px-4 py-3 text-[13px] text-[#FFC9C4]">
           <b>{t("canvas.problems")}</b>
@@ -340,6 +346,7 @@ function Toolbar({ changes }: { changes: boolean }) {
     <div className={cn(floating, "ml-auto flex items-center gap-1 p-1")}>
       {changes && (
         <>
+      {!EMBED && (
       <button
         type="button"
         onClick={toggle}
@@ -352,6 +359,7 @@ function Toolbar({ changes }: { changes: boolean }) {
       >
         <Filter size={14} /> {t("canvas.onlyChanges")}
       </button>
+      )}
       <button type="button" className={btn} onClick={expandChanged} title={t("canvas.expandChanged")} aria-label={t("canvas.expandChanged")}>
         <UnfoldVertical size={16} />
       </button>

@@ -67,6 +67,12 @@ body {
 .react-flow__edge {
   cursor: pointer;
 }
+/* modo iframe: clicar num card ou numa seta não faz nada, então o cursor não promete clique */
+.embed .react-flow__node-element,
+.embed .react-flow__edge,
+.embed .react-flow__edgelabel-renderer button {
+  cursor: default;
+}
 /* canvas único: ao abrir/fechar caixas, elas deslizam até a posição nova e as setas reaparecem depois */
 .relayout .react-flow__node {
   transition: transform 0.35s ease, width 0.35s ease, height 0.35s ease;

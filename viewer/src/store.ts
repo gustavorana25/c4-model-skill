@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { EMBED } from "./embed";
 import { useLang } from "./i18n";
 import { buildModel, hasChildren, isWithin, parseDoc, titleOf, type Model } from "./lib/model";
 import { defaultExpanded, revealing } from "./lib/view";
@@ -80,7 +81,7 @@ export const useStore = create<State>((set, get) => ({
   setListening: (on) => set((s) => (s.listening === on ? s : { listening: on, everListened: s.everListened || on })),
   setCommenting: (on, targets) =>
     set((s) => {
-      if (!on) return { commenting: false, commentTargets: [] };
+      if (!on || EMBED) return { commenting: false, commentTargets: [] };
       const sel = s.selected?.kind === "el" ? [s.selected.id] : [];
       return { commenting: true, commentTargets: targets ?? (s.commenting ? s.commentTargets : sel) };
     }),
@@ -135,7 +136,8 @@ export const useStore = create<State>((set, get) => ({
     if (m) set({ expanded: defaultExpanded(m), camera: null });
   },
   collapseAll: () => set({ expanded: new Set(), camera: null }),
-  select: (sel) => set(sel ? { selected: sel, tab: "review" } : { selected: null }),
+  // no iframe não há painel para mostrar o que foi selecionado
+  select: (sel) => set(sel && !EMBED ? { selected: sel, tab: "review" } : { selected: null }),
   pinStep: (id) => set(id ? { pinnedStep: id, flow: null } : { pinnedStep: null }),
   openFlow: (id, hop = 0) => {
     if (!id) return set({ flow: null });
