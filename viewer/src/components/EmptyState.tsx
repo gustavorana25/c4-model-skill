@@ -42,8 +42,9 @@ export function EmptyState() {
   };
 
   return (
-    <main className="flex flex-1 items-center justify-center overflow-auto bg-canvas bg-[radial-gradient(#1A2130_1px,transparent_1px)] [background-size:22px_22px] px-5 py-12">
-      <div className="flex w-full max-w-[720px] flex-col gap-7">
+    <main className="flex flex-1 overflow-auto bg-canvas bg-[radial-gradient(#1A2130_1px,transparent_1px)] [background-size:22px_22px] px-5 py-12">
+      {/* m-auto em vez de items-center/justify-center: quando o conteúdo é mais alto que a tela, o topo não é cortado */}
+      <div className="m-auto flex w-full max-w-[720px] flex-col gap-7">
         <div className="flex flex-col items-center gap-2.5 text-center">
           <h1 className="text-[32px] font-bold leading-tight tracking-tight text-fg">
             {t("empty.title1")}
