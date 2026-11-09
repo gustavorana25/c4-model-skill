@@ -1,5 +1,5 @@
 import { load } from "js-yaml";
-import { AlertTriangle, ArrowRight, Cloud, Route, ShieldCheck, type LucideIcon } from "lucide-react";
+import { AlertTriangle, ArrowRight, BookOpen, ClipboardCheck, Cloud, Route, Shapes, ShieldCheck, type LucideIcon } from "lucide-react";
 import { useState } from "react";
 import twoFaPt from "../../../skills/blueroll/examples/2fa.arch.yaml?raw";
 import twoFaEn from "../../../skills/blueroll/examples/2fa.en.arch.yaml?raw";
@@ -14,7 +14,12 @@ import { useLang, useT, type Key, type Lang } from "../i18n";
 import { useStore } from "../store";
 import { Button, cn } from "./ui";
 
-const STEPS = [1, 2, 3] as const;
+/** Os três usos da skill; as chaves de texto seguem empty.step{n}. */
+const USES = [
+  { n: 1, icon: ClipboardCheck },
+  { n: 2, icon: BookOpen },
+  { n: 3, icon: Shapes },
+] as const;
 
 /** Cada exemplo em pt-BR, en e es (mesmos ids): o card abre o do idioma da interface. */
 const EXAMPLES: { id: "2fa" | "aws" | "jornada"; icon: LucideIcon; yaml: Record<Lang, string> }[] = [
@@ -57,9 +62,9 @@ export function EmptyState() {
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          {STEPS.map((n) => (
+          {USES.map(({ n, icon: Icon }) => (
             <div key={n} className="flex flex-col gap-2 rounded-[14px] border border-[#222A39] bg-raised p-4">
-              <span className="flex size-7 items-center justify-center rounded-lg bg-accent-bg text-[13px] font-bold text-accent-ink">{n}</span>
+              <span className="flex size-8 items-center justify-center rounded-lg bg-accent-bg text-accent-ink"><Icon size={16} /></span>
               <b className="text-[14px] text-fg">{t(`empty.step${n}.t`)}</b>
               <span className="text-[13px] leading-relaxed text-muted">{t(`empty.step${n}.d`)}</span>
             </div>
