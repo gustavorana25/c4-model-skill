@@ -67,13 +67,13 @@ export function SectionTitle({ children, action }: { children: ReactNode; action
 export function Logo() {
   return (
     <div className="flex items-center gap-2.5">
-      <svg viewBox="0 0 32 32" className="size-7 shrink-0" aria-hidden="true">
-        <rect width="32" height="32" rx="8" fill="#3D6BFF" />
-        {/* planta desenrolada: o rolo à esquerda e a folha com duas caixas */}
-        <rect x="9" y="8" width="17" height="16" rx="1.5" fill="white" opacity=".92" />
-        <circle cx="9" cy="16" r="4" fill="#3D6BFF" stroke="white" strokeWidth="2" />
-        <rect x="15" y="11" width="4.5" height="4.5" rx="1" fill="#3D6BFF" />
-        <rect x="19" y="17" width="4.5" height="4.5" rx="1" fill="#3D6BFF" opacity=".6" />
+      {/* "Níveis abertos" (brand/blueroll-mark.svg): caixas aninhadas com uma abertura para o nível de dentro */}
+      <svg viewBox="0 0 64 64" className="size-7 shrink-0" aria-hidden="true">
+        <g fill="none" stroke="#3D6BFF" strokeWidth="6">
+          <rect x="8" y="8" width="48" height="48" rx="8" />
+          <path d="M28 20H40Q44 20 44 24V40Q44 44 40 44H24Q20 44 20 40V30" />
+        </g>
+        <rect x="28" y="28" width="8" height="8" rx="2" fill="#6E9BFF" />
       </svg>
       <span className="text-[15px] font-bold tracking-tight text-fg">Blueroll</span>
     </div>

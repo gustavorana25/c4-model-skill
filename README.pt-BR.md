@@ -1,4 +1,9 @@
-# Blueroll
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="brand/blueroll-lockup-dark.svg">
+    <img src="brand/blueroll-lockup-light.svg" alt="Blueroll" height="56">
+  </picture>
+</h1>
 
 [English](README.md) · **Português**
 
