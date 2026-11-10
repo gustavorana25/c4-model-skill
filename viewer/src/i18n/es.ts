@@ -110,6 +110,8 @@ export const es: Dict = {
   "comment.notSent": "No pude hablar con el chat. El mensaje está en el portapapeles: pégalo en el chat.",
   "comment.text": (list: string, text: string) => `Sobre ${list} en el diagrama: ${text}`,
   "comment.and": "y",
+  "comment.resume": "Después de responder, vuelve a escuchar la página del diagrama.",
+  "comment.footerResume": "La IA dejó de escuchar: el texto se copiará y le pide que vuelva a escuchar",
   "yaml.copied": "YAML copiado",
 
   "side.overview": "Visión general",

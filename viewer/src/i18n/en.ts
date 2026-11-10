@@ -110,6 +110,8 @@ export const en: Dict = {
   "comment.notSent": "Couldn't reach the chat. The message is on your clipboard: paste it in the chat.",
   "comment.text": (list: string, text: string) => `About ${list} in the diagram: ${text}`,
   "comment.and": "and",
+  "comment.resume": "After replying, go back to listening to the diagram page.",
+  "comment.footerResume": "The AI stopped listening: the text will be copied and asks it to listen again",
   "yaml.copied": "YAML copied",
 
   "side.overview": "Overview",

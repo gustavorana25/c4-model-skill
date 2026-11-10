@@ -29,4 +29,6 @@ Passos:
 
 Sem você escutando, o botão de comentar copia um texto como `Sobre "API Pix" (pix-api) no diagrama: …` para o humano colar no chat. Os ids entre parênteses são os do YAML.
 
+Se uma IA já escutou aquela aba, o texto colado termina com **"Depois de responder, volte a escutar a página do diagrama."** (em inglês, "After replying, go back to listening to the diagram page."; em espanhol, "Después de responder, vuelve a escuchar la página del diagrama."). Responda o comentário no chat, como no passo 4, e volte ao passo 3 dizendo só, em uma linha, **"Voltei a escutar o diagrama."** Se a aba não estiver mais aberta no seu navegador, abra de novo o link do YAML atual e siga do passo 2.
+
 **Resposta:** cada comentário respondido no chat, abrindo com os nomes dos elementos; cada mudança dita no chat junto com o `load()`.

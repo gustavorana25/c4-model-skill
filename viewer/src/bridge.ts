@@ -118,12 +118,18 @@ export function stop() {
   refreshListening();
 }
 
-/** Texto para colar no chat quando a página não consegue falar com a IA. */
-export function commentText(targets: Target[], text: string) {
-  if (!targets.length) return text;
-  const refs = targets.map((t) => `"${t.name}" (${t.id})`);
-  const list = refs.length > 1 ? `${refs.slice(0, -1).join(", ")} ${t("comment.and")} ${refs.at(-1)}` : refs[0];
-  return t("comment.text", list, text);
+/**
+ * Texto para colar no chat quando a página não consegue falar com a IA.
+ * Com `resume` (uma IA já escutou esta aba), termina pedindo para ela voltar a escutar.
+ */
+export function commentText(targets: Target[], text: string, resume = false) {
+  let out = text;
+  if (targets.length) {
+    const refs = targets.map((t) => `"${t.name}" (${t.id})`);
+    const list = refs.length > 1 ? `${refs.slice(0, -1).join(", ")} ${t("comment.and")} ${refs.at(-1)}` : refs[0];
+    out = t("comment.text", list, text);
+  }
+  return resume ? `${out}\n\n${t("comment.resume")}` : out;
 }
 
 /**
@@ -134,7 +140,7 @@ export async function comment(targetIds: string[], text: string): Promise<"sent"
   const s = useStore.getState();
   const targets = targetIds.map((id) => ({ id, name: s.model?.index.get(id)?.name ?? id }));
   const fallback = async () => {
-    await copyText(commentText(targets, text));
+    await copyText(commentText(targets, text, useStore.getState().everListened));
     useStore.getState().notify(t("comment.notSent"), "warn");
   };
   if (!isListening()) {

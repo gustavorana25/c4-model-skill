@@ -24,6 +24,7 @@ export function CommentComposer() {
   const targets = useStore((s) => s.commentTargets);
   const model = useStore((s) => s.model)!;
   const listening = useStore((s) => s.listening);
+  const everListened = useStore((s) => s.everListened);
   const setCommenting = useStore((s) => s.setCommenting);
   const toggle = useStore((s) => s.toggleCommentTarget);
   const [text, setText] = useState("");
@@ -170,7 +171,7 @@ export function CommentComposer() {
             <AtSign size={16} />
           </button>
           <span className="min-w-0 flex-1 truncate text-[12px] text-subtle">
-            {listening ? t("comment.footerOn") : t("comment.footerOff")}
+            {listening ? t("comment.footerOn") : everListened ? t("comment.footerResume") : t("comment.footerOff")}
           </span>
           <button
             type="button"

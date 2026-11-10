@@ -117,6 +117,8 @@ export const ptBR = {
   "comment.notSent": "Não consegui falar com o chat. A mensagem está na área de transferência: cole no chat.",
   "comment.text": (list: string, text: string) => `Sobre ${list} no diagrama: ${text}`,
   "comment.and": "e",
+  "comment.resume": "Depois de responder, volte a escutar a página do diagrama.",
+  "comment.footerResume": "A IA parou de escutar: o texto será copiado e pede para ela voltar a escutar",
   "yaml.copied": "YAML copiado",
 
   // barra lateral

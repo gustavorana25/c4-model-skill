@@ -131,4 +131,16 @@ describe("comentários", () => {
     );
     expect(commentText([], "x")).toBe("x");
   });
+
+  test("se uma IA já escutou esta aba, o texto copiado pede para ela voltar a escutar", async () => {
+    const copy = vi.spyOn(hooks, "copyText").mockResolvedValue();
+    const p = next(1000);
+    vi.advanceTimersByTime(1000);
+    await p;
+    stop();
+    expect(await comment(["api"], "e isso?")).toBe("copied");
+    expect(copy).toHaveBeenCalledWith(
+      `Sobre "api" (api) no diagrama: e isso?\n\nDepois de responder, volte a escutar a página do diagrama.`,
+    );
+  });
 });
