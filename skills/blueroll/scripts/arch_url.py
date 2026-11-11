@@ -261,6 +261,28 @@ def validate(doc) -> tuple[list[str], list[str]]:
             warnings.append(m("rel_dup", p=p))
         seen_rel.add(key)
 
+    # Uma relação presa a uma caixa com children some quando o humano abre a caixa: o viewer
+    # eleva relações de dentro para a caixa fechada, mas não desce a da caixa para os filhos.
+    # Precisa existir uma relação equivalente saindo de algum descendente.
+    def related(x: str, y: str) -> bool:
+        return x == y or x in ancestors(y) or y in ancestors(x)
+
+    valid_rels = [
+        (i, r["from"], r["to"])
+        for i, r in enumerate(doc.get("relations", []) or [])
+        if isinstance(r, dict) and r.get("from") in elements and r.get("to") in elements and r["from"] != r["to"]
+    ]
+    for i, f, t in valid_rels:
+        for box, other in ((f, t), (t, f)):
+            if not elements[box].get("children"):
+                continue
+            inner = any(
+                (box in ancestors(a) and related(b, other)) or (box in ancestors(b) and related(a, other))
+                for _, a, b in valid_rels
+            )
+            if not inner:
+                warnings.append(m("rel_shallow", p=f"relations[{i}]({f} -> {t})", box=box, other=other))
+
     touched: set[str] = set()
     step_ids: set[str] = set()
     for i, s in enumerate(doc.get("steps", []) or []):

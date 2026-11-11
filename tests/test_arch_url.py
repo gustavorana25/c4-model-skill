@@ -88,6 +88,20 @@ d = copy.deepcopy(doc)
 d["elements"][1]["children"][1]["children"][1].pop("children")  # pix-handler sem code
 check("aviso: componente novo que não abre", any("pix-handler" in w and "sem children" in w for w in A.validate(d)[1]))
 
+# relação presa só à caixa com children: some quando a caixa é aberta
+raso = {"version": 1, "kind": "system", "title": "X", "elements": [
+    {"id": "app", "type": "system", "name": "App", "children": [
+        {"id": "api", "type": "container", "name": "API"},
+        {"id": "web", "type": "container", "name": "Web"}]},
+    {"id": "banco", "type": "system", "name": "Banco"}],
+    "relations": [{"from": "app", "to": "banco", "label": "paga"}]}
+check("aviso: relação só na caixa com children", any("'app'" in w and "seta some" in w for w in A.validate(raso)[1]))
+fundo = copy.deepcopy(raso)
+fundo["relations"].append({"from": "api", "to": "banco", "label": "paga"})
+check("relação também no filho não avisa", not any("seta some" in w for w in A.validate(fundo)[1]))
+fundo["relations"] = [{"from": "api", "to": "banco"}]
+check("relação só no filho não avisa", not any("seta some" in w for w in A.validate(fundo)[1]))
+
 # kind: system (documentação do sistema como é hoje)
 loja = yaml.safe_load((SKILL / "examples" / "loja.arch.yaml").read_text(encoding="utf-8"))
 errs, warns = A.validate(loja)
