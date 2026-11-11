@@ -9,3 +9,17 @@ export function isEmbed(search: string): boolean {
 }
 
 export const EMBED = typeof location !== "undefined" && isEmbed(location.search);
+
+/**
+ * `?embed&zoom=0.8`: zoom mínimo do enquadramento no iframe. Sem ele, um diagrama grande encolhe
+ * até caber e o texto some; com ele, a câmera para nesse zoom, centraliza, e o leitor arrasta.
+ * Fora de 0.1–2.5 (os limites do canvas) ou sem número, fica sem mínimo.
+ */
+export function embedZoom(search: string): number | undefined {
+  const raw = new URLSearchParams(search).get("zoom");
+  if (raw === null || raw.trim() === "") return undefined;
+  const z = Number(raw);
+  return Number.isFinite(z) && z >= 0.1 && z <= 2.5 ? z : undefined;
+}
+
+export const EMBED_ZOOM = EMBED ? embedZoom(location.search) : undefined;

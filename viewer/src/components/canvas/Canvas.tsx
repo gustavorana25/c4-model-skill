@@ -11,7 +11,7 @@ import { ancestors, docHasChanges, statusOf, type Model } from "../../lib/model"
 import type { ArchDoc } from "../../lib/types";
 import { computeView } from "../../lib/view";
 import { useLang, useT } from "../../i18n";
-import { EMBED } from "../../embed";
+import { EMBED, EMBED_ZOOM } from "../../embed";
 import { flowSteps, useStore } from "../../store";
 import { cn, floating } from "../ui";
 import { BoundaryNode } from "./BoundaryNode";
@@ -32,7 +32,12 @@ const FIT_PADDING = { top: "84px", bottom: "72px", left: "32px", right: "32px" }
  * mudança de referência, e isso sobrescreve as opções de um rf.fitView() que ainda está na fila
  * (com saltos rápidos, a câmera enquadrava o diagrama inteiro em vez do salto).
  */
-const INITIAL_FIT = { padding: FIT_PADDING, maxZoom: 1.2 };
+const INITIAL_FIT = {
+  padding: FIT_PADDING,
+  // no iframe com ?zoom=, a câmera não afasta além dele: centraliza e o leitor arrasta
+  minZoom: EMBED_ZOOM,
+  maxZoom: Math.max(1.2, EMBED_ZOOM ?? 0),
+};
 
 /** Só o que muda o tamanho/posição das caixas dispara um novo layout. */
 /** Posição absoluta de cada caixa (o React Flow guarda posição relativa ao pai). */
@@ -391,7 +396,7 @@ function Toolbar({ changes }: { changes: boolean }) {
       <button
         type="button"
         className={btn}
-        onClick={() => rf.fitView({ padding: FIT_PADDING, duration: 300, maxZoom: 1.2 })}
+        onClick={() => rf.fitView({ ...INITIAL_FIT, duration: 300 })}
         aria-label={t("canvas.fit")}
       >
         <Maximize2 size={15} />

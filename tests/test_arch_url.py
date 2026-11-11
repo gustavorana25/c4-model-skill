@@ -191,6 +191,7 @@ check("mensagens com as mesmas chaves nos 3 idiomas", set(M["en"]) == set(M["pt-
 
 check("--embed acrescenta ?embed", A.with_embed("https://h/x/") == "https://h/x/?embed")
 check("--embed respeita query existente", A.with_embed("https://h/?a=1") == "https://h/?a=1&embed")
+check("--zoom vai junto do ?embed", A.with_embed("https://h/x/", 0.8) == "https://h/x/?embed&zoom=0.8")
 
 # sem jsonschema, itens que não são objeto viram erro (e não AttributeError)
 _js = sys.modules.get("jsonschema")

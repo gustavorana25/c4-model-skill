@@ -13,7 +13,7 @@ tipos do preset saem traduzidos (schema/notations.i18n.json); os types próprios
 
 Uso:
   arch_url.py validate <arquivo.yaml|json>
-  arch_url.py encode   <arquivo.yaml|json> [--base URL | --local] [--embed]
+  arch_url.py encode   <arquivo.yaml|json> [--base URL | --local] [--embed [--zoom N]]
   arch_url.py decode   <url|#hash|payload> [-o saida.yaml] [--json]
   arch_url.py brief    <arquivo.yaml|url> [-o saida.md]
 
@@ -544,9 +544,11 @@ def default_base() -> str:
     return os.environ.get("BLUEROLL_VIEWER_URL") or os.environ.get("C4PLAN_VIEWER_URL") or PUBLIC_VIEWER_URL
 
 
-def with_embed(base: str) -> str:
-    """Liga o modo iframe (?embed): o viewer mostra só o diagrama, sem cabeçalho nem painel."""
-    return base + ("&" if "?" in base else "?") + "embed"
+def with_embed(base: str, zoom: float | None = None) -> str:
+    """Liga o modo iframe (?embed): o viewer mostra só o diagrama, sem cabeçalho nem painel.
+    Com zoom, o enquadramento não afasta além dele (o leitor arrasta para ver o resto)."""
+    out = base + ("&" if "?" in base else "?") + "embed"
+    return out + (f"&zoom={zoom:g}" if zoom is not None else "")
 
 
 def local_base() -> str:
@@ -581,6 +583,7 @@ def main() -> None:
     e.add_argument("--base", help=f"URL do viewer (padrão: $BLUEROLL_VIEWER_URL ou {PUBLIC_VIEWER_URL})")
     e.add_argument("--local", action="store_true", help="usa o build local viewer/dist/index.html")
     e.add_argument("--embed", action="store_true", help="link para <iframe>: só o diagrama, sem cabeçalho nem painel")
+    e.add_argument("--zoom", type=float, help="com --embed: zoom mínimo do enquadramento (0.1 a 2.5; ex.: 0.8 para o texto ficar legível)")
 
     d = sub.add_parser("decode", help="converte URL/hash de volta para YAML")
     d.add_argument("url")
@@ -621,7 +624,9 @@ def main() -> None:
             print(msg(L, "ok", n=len(warnings)))
             return
         base = a.base or (local_base() if a.local else default_base())
-        url = (with_embed(base) if a.embed else base) + "#" + encode_payload(doc)
+        if a.zoom is not None and not (a.embed and 0.1 <= a.zoom <= 2.5):
+            ap.error("--zoom precisa de --embed e de um valor entre 0.1 e 2.5")
+        url = (with_embed(base, a.zoom) if a.embed else base) + "#" + encode_payload(doc)
         print(url)
         print(msg(L, "chars", n=len(url)), file=sys.stderr)
         return
