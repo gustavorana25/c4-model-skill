@@ -1,4 +1,4 @@
-import { Background, BackgroundVariant, MiniMap, ReactFlow, useReactFlow, useViewport, type EdgeTypes, type NodeTypes } from "@xyflow/react";
+import { Background, BackgroundVariant, MiniMap, ReactFlow, useReactFlow, useStoreApi, useViewport, type EdgeTypes, type NodeTypes } from "@xyflow/react";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronLeft, ChevronRight, Filter, Home, Maximize2, Minus, Plus, Route, Shrink, UnfoldVertical, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { hopLabel } from "../../lib/flow";
@@ -26,18 +26,33 @@ const edgeTypes: EdgeTypes = { relation: RelationEdge };
 const MIN_READABLE_ZOOM = 0.85;
 /** Zoom da câmera quando ela viaja de uma ponta à outra de um salto longo. */
 const TRAVEL_ZOOM = 1;
-const FIT_PADDING = { top: "84px", bottom: "72px", left: "32px", right: "32px" } as const;
+const PAD = { top: 84, bottom: 72, left: 32, right: 32 } as const;
+const FIT_PADDING = { top: `${PAD.top}px`, bottom: `${PAD.bottom}px`, left: `${PAD.left}px`, right: `${PAD.right}px` } as const;
 /**
  * Enquadramento inicial. Precisa ser um objeto fixo: o React Flow copia esta prop para o store a cada
  * mudança de referência, e isso sobrescreve as opções de um rf.fitView() que ainda está na fila
  * (com saltos rápidos, a câmera enquadrava o diagrama inteiro em vez do salto).
  */
-const INITIAL_FIT = {
-  padding: FIT_PADDING,
-  // no iframe com ?zoom=, a câmera não afasta além dele: centraliza e o leitor arrasta
-  minZoom: EMBED_ZOOM,
-  maxZoom: Math.max(1.2, EMBED_ZOOM ?? 0),
-};
+const INITIAL_FIT = { padding: FIT_PADDING, maxZoom: 1.2 };
+
+type Flow = ReturnType<typeof useReactFlow>;
+
+/**
+ * Enquadra o diagrama inteiro. No iframe com ?zoom=, se ele só caberia abaixo desse zoom, a câmera
+ * fica no zoom pedido e, em cada eixo que não cabe, mostra o começo (o topo, ou a esquerda nas
+ * notações que crescem para o lado) em vez do meio: é por onde a leitura começa.
+ */
+function fitDiagram(rf: Flow, size: { width: number; height: number }, duration = 0) {
+  const zoom = EMBED_ZOOM;
+  const b = rf.getNodesBounds(rf.getNodes());
+  const availW = size.width - PAD.left - PAD.right;
+  const availH = size.height - PAD.top - PAD.bottom;
+  if (!zoom || !b.width || Math.min(availW / b.width, availH / b.height, INITIAL_FIT.maxZoom) >= zoom)
+    return void rf.fitView({ ...INITIAL_FIT, duration });
+  const axis = (start: number, len: number, padA: number, avail: number) =>
+    len * zoom <= avail ? padA + (avail - len * zoom) / 2 - start * zoom : padA - start * zoom;
+  void rf.setViewport({ x: axis(b.x, b.width, PAD.left, availW), y: axis(b.y, b.height, PAD.top, availH), zoom }, { duration });
+}
 
 /** Só o que muda o tamanho/posição das caixas dispara um novo layout. */
 /** Posição absoluta de cada caixa (o React Flow guarda posição relativa ao pai). */
@@ -195,6 +210,29 @@ export function Canvas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [laid]);
 
+  // iframe com ?zoom=: o fitView do React Flow centralizaria no meio do diagrama; enquadra pelo começo,
+  // a cada nível novo, depois que as caixas dele forem medidas
+  const rfStore = useStoreApi();
+  useEffect(() => {
+    if (!EMBED_ZOOM || !laid) return;
+    const ids = laid.nodes.map((n) => n.id);
+    let alive = true;
+    let tries = 0;
+    const go = () => {
+      if (!alive) return;
+      if (!ids.every((id) => !!rf.getInternalNode(id)?.measured.width)) {
+        if (++tries < 40) setTimeout(go, 50);
+        return;
+      }
+      fitDiagram(rf, rfStore.getState());
+    };
+    setTimeout(go, 0);
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [laid?.focus, laid === null]);
+
   // passo atual do fluxo: com as caixas fechadas, saltos seguidos no mesmo card são um passo só
   const step = useMemo(() => {
     const steps = flowSteps({ doc, model, flow, followFlow, focus, expanded });
@@ -244,7 +282,7 @@ export function Canvas() {
       {/* remonta a cada nível: o fitView inicial do React Flow enquadra depois de medir os nós */}
       <ReactFlow
         key={laid ? (laid.focus ?? "__root") : "__loading"}
-        fitView
+        fitView={!EMBED_ZOOM}
         fitViewOptions={INITIAL_FIT}
         nodes={nodes}
         edges={edges}
@@ -354,6 +392,7 @@ function Breadcrumbs({ model, focus }: { model: Model; focus: string | null }) {
 
 function Toolbar({ changes }: { changes: boolean }) {
   const rf = useReactFlow();
+  const rfStore = useStoreApi();
   const onlyChanges = useStore((s) => s.onlyChanges);
   const toggle = useStore((s) => s.toggleOnlyChanges);
   const expandChanged = useStore((s) => s.expandChanged);
@@ -396,7 +435,7 @@ function Toolbar({ changes }: { changes: boolean }) {
       <button
         type="button"
         className={btn}
-        onClick={() => rf.fitView({ ...INITIAL_FIT, duration: 300 })}
+        onClick={() => fitDiagram(rf, rfStore.getState(), 300)}
         aria-label={t("canvas.fit")}
       >
         <Maximize2 size={15} />
