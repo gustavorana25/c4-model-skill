@@ -22,7 +22,7 @@ The same skill also documents an existing system, for onboarding or for getting 
 ## What you get
 
 - **A diagram that goes from context down to code.** Systems, containers, components and files, with what is new, changed and removed in color. Everything starts collapsed at the context level, and you open only what you want to see.
-- **Hop-by-hop flows.** How the system works after the plan ("Login with the authenticator app", "Too many wrong codes"). You step through with ← → and the diagram drills down to the level of each hop.
+- **Hop-by-hop flows.** How the system works after the plan ("Login with the authenticator app", "Too many wrong codes"). You step through with ← →: with the boxes closed, the hops that happen inside the same card are listed together; turn on "Open the boxes of each hop" and the diagram drills down to the level of each hop.
 - **Plan steps linked to the architecture.** Each step shows which elements it creates or changes.
 - **Explicit constraints.** What the implementation must respect ("idempotency by txid", "migration without table lock").
 - **Other notations.** `processo` (lanes, steps, decisions), `infra` (cloud, region, network, cluster), `dominio` (contexts, aggregates, events), `jornada` (user journey to a feature), `livre`, and custom types in the YAML. See [`references/notacoes.md`](skills/blueroll/references/notacoes.md).

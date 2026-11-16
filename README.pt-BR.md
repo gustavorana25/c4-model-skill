@@ -20,7 +20,7 @@ A mesma skill também documenta um sistema que já existe, para onboarding ou pa
 ## O que você recebe
 
 - **Diagrama que desce do contexto até o código.** Sistemas, containers, componentes e arquivos, com o que é novo, alterado e removido em cores. Tudo começa fechado no nível de contexto, e você abre só o que quer ver.
-- **Fluxos salto a salto.** Como o sistema funciona depois do plano ("Login com o app autenticador", "Código errado demais"). Você avança com ← → e o diagrama desce até o nível de cada salto.
+- **Fluxos salto a salto.** Como o sistema funciona depois do plano ("Login com o app autenticador", "Código errado demais"). Você avança com ← →: com as caixas fechadas, os saltos que acontecem dentro do mesmo card aparecem juntos; ligue "Abrir as caixas de cada salto" e o diagrama desce até o nível de cada salto.
 - **Passos do plano ligados à arquitetura.** Cada passo mostra quais elementos ele cria ou altera.
 - **Restrições explícitas.** O que a implementação precisa respeitar ("idempotência por txid", "migração sem lock de tabela").
 - **Outras notações.** `processo` (raias, etapas, decisões), `infra` (nuvem, região, rede, cluster), `dominio` (contextos, agregados, eventos), `jornada` (caminho do usuário até uma feature), `livre`, e tipos próprios no YAML. Veja [`references/notacoes.md`](skills/blueroll/references/notacoes.md).

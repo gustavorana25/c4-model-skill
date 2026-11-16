@@ -70,7 +70,7 @@ export const useStore = create<State>((set, get) => ({
   selected: null,
   pinnedStep: null,
   flow: null,
-  followFlow: true,
+  followFlow: false,
   expanded: new Set(),
   camera: null,
   onlyChanges: false,
