@@ -27,6 +27,8 @@ export function flowMarks(doc: ArchDoc, view: View, flowId: string, upto: number
   const flow = doc.flows?.find((f) => f.id === flowId);
   if (!flow) return null;
   const marks: FlowMarks = { edgeNums: new Map(), activeEdges: new Set(), activeNodes: new Set(), litNodes: new Set(), insideNode: null };
+  /** O passo começou por uma seta que entra neste card: os saltos seguintes podem acontecer lá dentro. */
+  let entered: string | null = null;
   flow.hops.slice(0, upto + 1).forEach((h, i) => {
     const a = view.toVisible(h.from);
     const b = view.toVisible(h.to);
@@ -39,9 +41,15 @@ export function flowMarks(doc: ArchDoc, view: View, flowId: string, upto: number
     if (i >= from) {
       if (a) marks.activeNodes.add(a);
       if (b) marks.activeNodes.add(b);
-      // o passo inteiro acontece dentro de uma caixa só
-      if (i === from) marks.insideNode = a && a === b ? a : null;
-      else if (marks.insideNode && !(a === marks.insideNode && b === marks.insideNode)) marks.insideNode = null;
+      // o passo acontece dentro de uma caixa só, ou entra nela por uma seta e continua lá dentro
+      if (i === from) {
+        marks.insideNode = a && a === b ? a : null;
+        entered = a !== b ? b : null;
+      } else {
+        const inside = a && a === b ? a : null;
+        marks.insideNode = inside && (inside === marks.insideNode || inside === entered) ? inside : null;
+        entered = null;
+      }
     }
   });
   return marks;

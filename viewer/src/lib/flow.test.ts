@@ -55,11 +55,55 @@ describe("passos com as caixas fechadas", () => {
     expect(groups[0][0]).toBe(0);
     expect(groups.at(-1)![1]).toBe(flow.hops.length - 1);
     groups.slice(1).forEach(([a], i) => expect(a).toBe(groups[i][1] + 1));
-    // dentro de um passo, todo salto cai no mesmo lugar
+    // dentro de um passo, todo salto cai no mesmo lugar; ou o passo entra num card por uma seta e continua lá dentro
     for (const [a, b] of groups) {
-      const where = (i: number) => [closed.toVisible(flow.hops[i].from), closed.toVisible(flow.hops[i].to)].join(">");
-      for (let i = a; i <= b; i++) expect(where(i)).toBe(where(a));
+      const where = (i: number) => [closed.toVisible(flow.hops[i].from), closed.toVisible(flow.hops[i].to)];
+      const [x, y] = where(a);
+      for (let i = a + 1; i <= b; i++) {
+        const [p, q] = where(i);
+        const same = p === x && q === y;
+        const insideEntered = x !== y && p === y && q === y;
+        expect(same || insideEntered, `salto ${i + 1}: ${p}>${q} no passo que começa em ${x}>${y}`).toBe(true);
+      }
     }
+  });
+
+  test("a seta que entra num card fechado se junta aos saltos lá dentro", () => {
+    const d = {
+      version: 1,
+      plan: "x",
+      elements: [
+        { id: "web", type: "container", name: "Web" },
+        { id: "api", type: "container", name: "API", children: [
+          { id: "ctrl", type: "component", name: "Ctrl" },
+          { id: "repo", type: "component", name: "Repo" },
+          { id: "svc", type: "component", name: "Svc" },
+        ] },
+        { id: "fila", type: "queue", name: "Fila" },
+      ],
+      relations: [
+        { from: "web", to: "ctrl" },
+        { from: "ctrl", to: "svc" },
+        { from: "svc", to: "repo" },
+        { from: "repo", to: "fila" },
+      ],
+      flows: [{ id: "f", title: "F", hops: [
+        { from: "web", to: "ctrl" },
+        { from: "ctrl", to: "svc" },
+        { from: "svc", to: "repo" },
+        { from: "repo", to: "fila" },
+      ] }],
+    } as unknown as ArchDoc;
+    const dm = buildModel(d);
+    const v = computeView(d, dm, null, new Set());
+    const hops = d.flows![0].hops;
+    // entra na API e faz duas coisas lá dentro: um passo; sair para a fila é outro
+    expect(hopGroups(v, hops)).toEqual([[0, 2], [3, 3]]);
+    expect(flowMarks(d, v, "f", 2, 0)!.insideNode).toBe("api");
+    // só a seta de entrada não é "dentro" de nada
+    expect(flowMarks(d, v, "f", 0, 0)!.insideNode).toBeNull();
+    // com a API aberta, cada salto é uma seta entre cards diferentes
+    expect(hopGroups(computeView(d, dm, null, new Set(["api"])), hops)).toEqual(hops.map((_, i) => [i, i]));
   });
 
   test("com tudo aberto, cada salto é um passo", () => {
@@ -77,6 +121,8 @@ describe("passos com as caixas fechadas", () => {
     const marks = flowMarks(doc, closed, flow.id, b, a)!;
     const vis = new Set(flow.hops.slice(a, b + 1).flatMap((h) => [closed.toVisible(h.from), closed.toVisible(h.to)]));
     for (const id of vis) expect(marks.activeNodes.has(id!)).toBe(true);
-    expect(marks.insideNode).toBe(vis.size === 1 ? [...vis][0] : null);
+    const [x, y] = [closed.toVisible(flow.hops[a].from), closed.toVisible(flow.hops[a].to)];
+    // tudo numa caixa só, ou entrou nela por uma seta e continuou lá dentro
+    expect(marks.insideNode).toBe(vis.size === 1 ? [...vis][0] : x !== y && flow.hops.slice(a + 1, b + 1).every((h) => closed.toVisible(h.from) === y && closed.toVisible(h.to) === y) ? y : null);
   });
 });

@@ -32,17 +32,32 @@ function hopKey(view: View, h: Hop): string {
   return a === b ? `in:${a}` : `${a}>${b}`;
 }
 
+/** A caixa visível onde o salto chega, se ele for uma seta (null dentro de uma caixa só). */
+function hopTarget(view: View, h: Hop): string | null {
+  const a = view.toVisible(h.from);
+  const b = view.toVisible(h.to);
+  return b && a !== b ? b : null;
+}
+
 /**
- * Passos do fluxo nesta view: saltos seguidos que caem no mesmo card fechado (ou na mesma seta,
- * no mesmo sentido) viram um passo só, [primeiro, último] (0-based). Com tudo aberto, cada salto é um passo.
+ * Passos do fluxo nesta view, [primeiro, último] (0-based). Viram um passo só os saltos seguidos que
+ * caem no mesmo card fechado ou na mesma seta, no mesmo sentido; e a seta que entra num card fechado
+ * junto com os saltos logo depois dela que acontecem lá dentro ("chega no card e faz isto lá dentro").
+ * Com tudo aberto, cada salto é um passo.
  */
 export function hopGroups(view: View, hops: Hop[]): [number, number][] {
   const out: [number, number][] = [];
   let prev = "";
+  /** O card onde o passo atual entrou por uma seta: os saltos lá dentro continuam o passo. */
+  let entered: string | null = null;
   hops.forEach((h, i) => {
     const k = hopKey(view, h);
-    if (out.length && k === prev) out[out.length - 1][1] = i;
-    else out.push([i, i]);
+    if (out.length && (k === prev || (entered !== null && k === `in:${entered}`))) {
+      out[out.length - 1][1] = i;
+    } else {
+      out.push([i, i]);
+      entered = hopTarget(view, h);
+    }
     prev = k;
   });
   return out;
